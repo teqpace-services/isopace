@@ -3,7 +3,7 @@
 > **Living document.** Status colours are updated as work lands. The detailed
 > design each phase implements lives in [`ARCHITECTURE.md`](ARCHITECTURE.md).
 >
-> **Last updated:** 2026-06-01
+> **Last updated:** 2026-06-01 (Phase 0 closed; Phase 1 `iso8583/` core landed)
 
 ---
 
@@ -27,8 +27,8 @@ tests (and fuzz/bench where noted) pass, SPDX header present, public API matches
 
 | # | Phase | Progress | % |
 |:-:|-------|----------|:-:|
-| 0 | Project foundation | 🟩🟩🟩🟩🟩🟩🟩🟩🟩🟨 | 90 |
-| 1 | ISO-8583 core (`iso8583/`) | ⬜⬜⬜⬜⬜⬜⬜⬜⬜⬜ | 0 |
+| 0 | Project foundation | 🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩 | 100 |
+| 1 | ISO-8583 core (`iso8583/`) | 🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩 | 100 |
 | 2 | Codec catalogs (`fieldcodec/`, `lengthcodec/`) | ⬜⬜⬜⬜⬜⬜⬜⬜⬜⬜ | 0 |
 | 3 | Packager profiles (`packager/`) | ⬜⬜⬜⬜⬜⬜⬜⬜⬜⬜ | 0 |
 | 4 | Alternate renderings (`render/`) | ⬜⬜⬜⬜⬜⬜⬜⬜⬜⬜ | 0 |
@@ -57,10 +57,10 @@ tests (and fuzz/bench where noted) pass, SPDX header present, public API matches
 | 🟢 | Implementation plan / progress tracker | `IMPLEMENTATION_PLAN.md` |
 | 🟢 | Self-verifying license fetch script | `scripts/fetch-license.sh` |
 | 🟢 | Populate `LICENSE` with verbatim AGPL-3.0 (fetched + verified) | `LICENSE` |
-| 🟡 | Initial commit (local) ✓ — push to `origin/main` is yours to run | — |
+| 🟢 | Initial commit ✓ (note: 2 local commits ahead of `origin/main`; push is yours to run) | — |
 | 🟢 | Contact mailboxes (`licensing@`/`security@`) + employee IP-assignment confirmed | — |
 | 🟢 | Repo-hardening files: CODEOWNERS, dependabot, PR template, CLA-bot workflow, issue config | `.github/` |
-| 🟡 | GitHub settings: branch protection, private vuln reporting, CLA-bot secret (yours) | GitHub UI |
+| 🟢 | GitHub settings: branch protection, private vuln reporting, CLA-bot secret | GitHub UI |
 
 ---
 
@@ -70,21 +70,33 @@ The dependency-free heart. Built in slices so each compiles and tests green.
 
 | Status | Task | File |
 |:------:|------|------|
-| 🔵 | `FieldPath` grammar — parse/format, inline array, LRU cache, `DE`/`MustPath` | `path.go` |
-| ⚪ | `Decimal` / `Amount` fixed-point money (never `float64`) | `decimal.go` |
-| ⚪ | `Bitmap` — 192-bit set, popcount, `Range`, engine-derived only | `bitmap.go` |
-| ⚪ | Structured errors — `FieldError`, `Violation`, `ValidationError` | `errors.go` |
-| ⚪ | Codec **interfaces** `FieldCodec`/`LengthCodec`/`BitmapCodec` (§10 C1) | `codec_iface.go` |
-| ⚪ | `Value` — zero-copy view, `Kind`, `Bytes`/`String`/`Int`/`Decimal` | `value.go` |
-| ⚪ | `Schema` / `FieldDef` / `BitmapSpec` + build-time validation | `schema.go` |
-| ⚪ | `SchemaBuilder` — `Field`/`Composite`/`Tag` (§10 C4), `Derive`/`Override` | `schema_builder.go` |
-| ⚪ | `Message` — slots, copy-on-write, `Seal`/`Clone`, dynamic API (§10 C3) | `message.go` |
-| ⚪ | `Get[T]` union-constraint generic + typed setters (§10 C2) | `get.go` |
-| ⚪ | `Codec` engine — lazy `Unmarshal`, append `Marshal` (derived bitmap, fast path), `Validate` | `codec.go` |
-| ⚪ | `Validator` interface + combinators (`Luhn`, `Digits`, `LenBetween`, …) | `validate.go` |
-| ⚪ | `Binder[T]` struct-binding, cached plan, init-time tag check | `bind.go` |
-| ⚪ | `View` read-only projection | `view.go` |
-| ⚪ | Unit tests + fuzz (parse, marshal/unmarshal round-trip, COW) | `*_test.go` |
+| 🟢 | `FieldPath` grammar — parse/format, inline array, LRU cache, `DE`/`MustPath` | `path.go` |
+| 🟢 | `Decimal` / `Amount` fixed-point money (never `float64`) | `decimal.go` |
+| 🟢 | `Bitmap` — 192-bit set, popcount, `Range`, engine-derived only | `bitmap.go` |
+| 🟢 | Structured errors — `FieldError`, `Violation`, `ValidationError` | `errors.go` |
+| 🟢 | Codec **interfaces** `FieldCodec`/`LengthCodec`/`BitmapCodec` (§10 C1) | `codec_iface.go` |
+| 🟢 | `Value` — zero-copy view, `Kind`, `Bytes`/`String`/`Int`/`Decimal` | `value.go` |
+| 🟢 | `Schema` / `FieldDef` / `BitmapSpec` + build-time validation | `schema.go` |
+| 🟢 | `SchemaBuilder` — `Field`/`Composite`/`Tag` (§10 C4), `Derive`/`Override` | `schema_builder.go` |
+| 🟢 | `Message` — slots, copy-on-write, `Seal`/`Clone`, dynamic API (§10 C3) | `message.go` |
+| 🟢 | `Get[T]`/`GetS`/`GetP` union-constraint generics (§10 C2) | `get.go` |
+| 🟢 | `Codec` engine — lazy `Unmarshal`, append `Marshal` (derived bitmap, fast path), `Validate` | `codec.go` |
+| 🟢 | `Validator` interface + combinators (`Luhn`, `Digits`, `LenBetween`, …) | `validate.go` |
+| 🟢 | `Binder[T]` struct-binding, cached plan, init-time tag check | `bind.go` |
+| 🟢 | `View` read-only projection | `view.go` |
+| 🟢 | Unit tests + fuzz (parse, marshal/unmarshal round-trip, COW) | `*_test.go` |
+
+> **Done:** `go build`/`go vet`/`gofmt` clean, `go test -race` green, both fuzz
+> targets run clean (a 13-digit-DE int32-overflow bug was caught and fixed; its
+> regression seed lives in `iso8583/testdata/fuzz/`). The package is
+> stdlib-only (no copyleft dependency). Engine tests are driven by minimal
+> in-package stub codecs (`codecs_test.go`); the shipped codec catalog is Phase 2.
+>
+> **Carried into Phase 2 (by design, not a gap):** the *runtime* decode/encode
+> of nested composites & BER-TLV. The `FieldPath` grammar, `Composite`/`Tag`
+> schema builders, `Sub`-schema lookup, and `Value.Composite()` plumbing are all
+> in place and validated at build time, but the actual TLV/subfield wire codec
+> (and therefore nested `SetP`/binding writes) lands with `tlv.ber` below.
 
 ---
 
@@ -92,8 +104,8 @@ The dependency-free heart. Built in slices so each compiles and tests green.
 
 | Status | Task | File |
 |:------:|------|------|
-| ⚪ | EBCDIC CP037 / CP1047 translation tables | `internal/ebcdic/` |
-| ⚪ | Packed-decimal (BCD) pack/unpack primitives | `internal/bcd/` |
+| 🔵 | EBCDIC CP037 / CP1047 translation tables | `internal/ebcdic/` |
+| 🔵 | Packed-decimal (BCD) pack/unpack primitives | `internal/bcd/` |
 | ⚪ | Char codecs — ASCII, EBCDIC037, EBCDIC1047, UTF-8, binary | `fieldcodec/char.go` |
 | ⚪ | Numeric codecs — ASCII, BCD, rBCD, binary, EBCDIC | `fieldcodec/numeric.go` |
 | ⚪ | Amount codecs — ASCII, BCD, binary → `Decimal` | `fieldcodec/amount.go` |
