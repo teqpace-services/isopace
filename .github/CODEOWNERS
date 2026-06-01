@@ -1,0 +1,13 @@
+# Code ownership for Isopace. Listed owners are auto-requested for review and,
+# when "Require review from Code Owners" branch protection is on, must approve.
+#
+# TODO: replace @teqpace-services/maintainers with the real GitHub team/usernames.
+
+*                       @teqpace-services/maintainers
+
+# Security-critical and legal files warrant extra scrutiny.
+/vault/                 @teqpace-services/maintainers
+/LICENSE                @teqpace-services/maintainers
+/COMMERCIAL-LICENSE.md  @teqpace-services/maintainers
+/CLA.md                 @teqpace-services/maintainers
+/.github/               @teqpace-services/maintainers

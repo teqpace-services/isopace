@@ -1,0 +1,16 @@
+Isopace
+Copyright (C) 2026 Teqpace Services Ltd.
+
+This product is developed and maintained by Teqpace Services Ltd.
+(https://teqpace.com).
+
+Isopace is an independent, clean-room implementation. It is not derived from,
+affiliated with, or endorsed by the jPOS project or jPOS Software SRL.
+"jPOS" is a trademark of its respective owner.
+
+Isopace is dual-licensed:
+  - under the GNU Affero General Public License v3.0 or later (see LICENSE); or
+  - under a commercial license from Teqpace Services Ltd. (see COMMERCIAL-LICENSE.md).
+
+Contributors are credited in the AUTHORS file. Copyright in Isopace is held by
+Teqpace Services Ltd.
