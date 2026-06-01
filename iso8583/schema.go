@@ -55,7 +55,7 @@ type FieldDef struct {
 	Kind     Kind         // canonical model kind
 	Codec    FieldCodec   // VALUE codec
 	Length   LengthCodec  // LENGTH-PREFIX codec; nil == fixed MaxLen wire bytes
-	MaxLen   int          // max value length (digits/chars/octets / wire bytes for fixed)
+	MaxLen   int          // max value length in logical units (digits/chars/octets); the wire byte span is derived via the codec's optional WidthCodec
 	Scale    uint8        // decimal scale for KindAmount fields (minor-unit digits)
 	Pad      PadRule      // fixed-field padding
 	Validate []Validator  // ordered field-level rules

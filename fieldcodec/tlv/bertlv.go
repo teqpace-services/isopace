@@ -57,7 +57,15 @@ func (berTLV) DecodeBody(body []byte, _ int, def *iso8583.FieldDef) (iso8583.Val
 
 		var tv iso8583.Value
 		if td, ok := lookupTag(def, tag); ok && td.Codec != nil {
-			dv, derr := td.Codec.DecodeBody(val, len(val), td)
+			// BER preserves only octet length, not the logical unit count a
+			// packed (WidthCodec) codec needs. For a fixed-width tag (MaxLen set)
+			// pass MaxLen as units; otherwise the byte count (correct for the
+			// non-packed codecs — ASCII/binary — that ignore odd/even nibbles).
+			units := len(val)
+			if td.MaxLen > 0 {
+				units = td.MaxLen
+			}
+			dv, derr := td.Codec.DecodeBody(val, units, td)
 			if derr != nil {
 				return iso8583.Value{}, derr
 			}
@@ -160,7 +168,9 @@ func readTLV(b []byte, i int) (tag string, val []byte, next int, err error) {
 	return tag, b[i : i+length], i + length, nil
 }
 
-// appendBERLen appends a definite-form BER length for n bytes.
+// appendBERLen appends a definite-form BER length for n bytes, supporting the
+// short form plus 1–4 length octets — matching the forms readTLV accepts, so a
+// decoded long-form length always re-encodes without truncation.
 func appendBERLen(dst []byte, n int) []byte {
 	switch {
 	case n < 0x80:
@@ -169,7 +179,9 @@ func appendBERLen(dst []byte, n int) []byte {
 		return append(dst, 0x81, byte(n))
 	case n <= 0xFFFF:
 		return append(dst, 0x82, byte(n>>8), byte(n))
-	default:
+	case n <= 0xFFFFFF:
 		return append(dst, 0x83, byte(n>>16), byte(n>>8), byte(n))
+	default:
+		return append(dst, 0x84, byte(n>>24), byte(n>>16), byte(n>>8), byte(n))
 	}
 }
