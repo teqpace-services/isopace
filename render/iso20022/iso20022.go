@@ -78,8 +78,8 @@ type otherID struct {
 	ID string `xml:"Id"`
 }
 
-// ErrNoAmount is returned by Unmarshal when a currency is present without a
-// well-formed amount.
+// ErrNoAmount is returned when an amount element is present but does not parse
+// as a well-formed decimal.
 var ErrNoAmount = errors.New("iso20022: malformed amount")
 
 // Marshal renders a View to a pacs.008 XML document.

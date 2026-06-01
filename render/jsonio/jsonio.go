@@ -22,6 +22,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"sort"
 	"strconv"
 
 	"github.com/teqpace-services/isopace/iso8583"
@@ -167,9 +168,21 @@ func Unmarshal(data []byte, s *iso8583.Schema) (*iso8583.Message, error) {
 			return nil, fmt.Errorf("jsonio: DE %d not in schema", de)
 		}
 		if fj.TLV != nil {
-			for tag, raw := range fj.TLV {
+			if def.Kind != iso8583.KindComposite || def.Sub == nil {
+				return nil, fmt.Errorf("jsonio: DE %d is not composite but has tlv data", de)
+			}
+			// Iterate tags in sorted order: JSON objects are unordered, so the
+			// reconstructed tag order is normalised to ascending (deterministic);
+			// without this, Go's random map iteration would make the round-trip
+			// wire output non-deterministic.
+			tags := make([]string, 0, len(fj.TLV))
+			for tag := range fj.TLV {
+				tags = append(tags, tag)
+			}
+			sort.Strings(tags)
+			for _, tag := range tags {
 				td, _ := def.Sub.LookupTag(tag)
-				arg, err := argFromJSON(raw, kindOf(td))
+				arg, err := argFromJSON(fj.TLV[tag], kindOf(td))
 				if err != nil {
 					return nil, err
 				}
