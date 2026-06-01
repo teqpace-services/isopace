@@ -70,7 +70,10 @@ func Route(groups ...string) Result { return Result{action: actContinue, groups:
 
 // Done stops the prepare pass and commits the stages that have joined so far —
 // for a stage that has produced the final response and wants to short-circuit
-// the remaining pipeline.
+// the remaining pipeline. The stage returning Done does not itself join the
+// transaction, so its own Commit/Abort (if it implements them) will not run;
+// return Continue instead if the terminal stage must participate in the commit
+// phase.
 func Done() Result { return Result{action: actDone} }
 
 // funcStage adapts a function to Stage; see [Func].

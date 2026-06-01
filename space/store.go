@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 	"sync"
 )
 
@@ -290,12 +291,30 @@ func (s *Store) Compact() error {
 		s.file, _ = os.OpenFile(s.path, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0o600)
 		return fmt.Errorf("space: compact rename: %w", err)
 	}
+	// fsync the parent directory so the rename is durable. Without this the
+	// rename can be lost on a crash and the pre-compaction log would reappear,
+	// silently undoing the compaction the caller was told succeeded.
+	if err := syncDir(s.path); err != nil {
+		s.file, _ = os.OpenFile(s.path, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0o600)
+		return fmt.Errorf("space: compact fsync dir: %w", err)
+	}
 	f, err := os.OpenFile(s.path, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0o600)
 	if err != nil {
 		return fmt.Errorf("space: compact reopen: %w", err)
 	}
 	s.file = f
 	return nil
+}
+
+// syncDir fsyncs the directory containing path, making a create/rename within it
+// durable.
+func syncDir(path string) error {
+	d, err := os.Open(filepath.Dir(path))
+	if err != nil {
+		return err
+	}
+	defer d.Close()
+	return d.Sync()
 }
 
 // Close flushes and closes the log and unblocks waiters with ErrClosed.

@@ -79,10 +79,12 @@ func (r retryStage) Prepare(ctx context.Context, ex *Exchange) (Result, error) {
 		if attempt == r.policy.MaxAttempts {
 			break
 		}
+		timer := time.NewTimer(r.policy.Backoff(attempt))
 		select {
 		case <-ctx.Done():
+			timer.Stop()
 			return res, ctx.Err()
-		case <-time.After(r.policy.Backoff(attempt)):
+		case <-timer.C:
 		}
 	}
 	return res, err
