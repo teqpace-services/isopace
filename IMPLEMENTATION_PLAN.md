@@ -3,7 +3,7 @@
 > **Living document.** Status colours are updated as work lands. The detailed
 > design each phase implements lives in [`ARCHITECTURE.md`](ARCHITECTURE.md).
 >
-> **Last updated:** 2026-06-01 (Phases 0–12 landed and folded into **v0.1.0**: concrete site packagers `zone`/`fields`/`switch` with DE 127 subfields, hardened `SealedVault`, and the commercial-agreement draft merged into the 0.1.0 changelog; the release line is now on `main`)
+> **Last updated:** 2026-06-01 (**v0.1.0 released** — Phases 0–12 folded into a single first release on `main`: concrete site packagers `zone`/`fields`/`switch` with DE 127 subfields, hardened `SealedVault`, and the commercial-agreement draft; tag pushed and GitHub release published)
 
 ---
 
@@ -368,7 +368,7 @@ The dependency-free heart. Built in slices so each compiles and tests green.
 | 🟢 | Simulator / test host | `examples/simulator` (runtime.Host + listener + ops admin API) |
 | 🟢 | Docs + API reference | `README.md`, `docs/getting-started.md`; GoDoc is the API reference |
 | 🟢 | SemVer policy + `CHANGELOG.md` | `docs/versioning.md`, `CHANGELOG.md` |
-| 🟢 | Tag `v0.1.0` | annotated tag created locally (unpushed — push is the maintainer's) |
+| 🟢 | Tag `v0.1.0` + GitHub release | annotated tag pushed and release published at `v0.1.0` |
 
 > **Done:** the framework is assembled into runnable programs — an `issuer` host
 > and an `acquirer` client over a real switch, plus a `simulator` test host built
@@ -378,22 +378,23 @@ The dependency-free heart. Built in slices so each compiles and tests green.
 > loopback test (approve/decline/concurrent correlation); the binaries were
 > smoke-tested. README rewritten as the entry point; `docs/getting-started.md`
 > and `docs/versioning.md` (SemVer policy) added; `CHANGELOG.md` records v0.1.0.
-> The `v0.1.0` annotated tag is created locally and left **unpushed**.
+> The `v0.1.0` tag is **pushed** and the **GitHub release is published**.
 
 ---
 
 ## Project status
 
-**🟢 v0.1.0 feature-complete and merged to `main`.** All 13 phases (0–12) are
-done: 21 importable packages plus examples, every one `gofmt`/`go vet` clean and
-green under `go test -race`, and the module is **stdlib-only** (no third-party
-dependency in the graph; optional OTel / NATS / SQL / HSM integrations are
-drop-in adapters). The whole project line has been fast-forwarded onto `main`
-(retiring the long-running `phase-1-iso8583-core` branch), and the post-tag
-additions (site packagers, `SealedVault`, commercial-agreement draft) were folded
-into a single clean **`v0.1.0`** rather than cutting a phantom version. The
-`v0.1.0` tag is local and unpushed — publishing the release (push `main` + the
-tag, then the GitHub release) is the maintainer's to run.
+**🟢 v0.1.0 released.** All 13 phases (0–12) are done: 21 importable packages
+plus examples, every one `gofmt`/`go vet` clean and green under `go test -race`,
+and the module is **stdlib-only** (no third-party dependency in the graph;
+optional OTel / NATS / SQL / HSM integrations are drop-in adapters). The whole
+project line landed on `main` via a rebase-merge (linear history; the
+long-running `phase-1-iso8583-core` branch is retired), with the post-tag
+additions (site packagers, `SealedVault`, commercial-agreement draft) folded into
+a single clean **`v0.1.0`** rather than a phantom version. The `v0.1.0` tag is
+pushed and the GitHub release is published; the example binaries
+(`issuer`/`acquirer`/`simulator`) were run end to end (live 0200/0210 approve and
+limit-decline, with ops health + Prometheus metrics).
 
 ---
 
