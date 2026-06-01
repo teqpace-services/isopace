@@ -26,7 +26,7 @@ import (
 // asciiStr — char.ascii (KindString). Fixed fields are space-padded on the right.
 type asciiStr struct{}
 
-func (asciiStr) DecodeBody(body []byte, _ *FieldDef) (Value, error) {
+func (asciiStr) DecodeBody(body []byte, _ int, _ *FieldDef) (Value, error) {
 	return Value{raw: body, kind: KindString}, nil
 }
 func (asciiStr) EncodeBody(dst []byte, v Value, def *FieldDef) ([]byte, error) {
@@ -42,7 +42,7 @@ func (asciiStr) Name() string { return "char.ascii" }
 // asciiNum — num.ascii (KindNumeric). Fixed fields are zero-padded on the left.
 type asciiNum struct{}
 
-func (asciiNum) DecodeBody(body []byte, _ *FieldDef) (Value, error) {
+func (asciiNum) DecodeBody(body []byte, _ int, _ *FieldDef) (Value, error) {
 	return Value{raw: body, kind: KindNumeric}, nil
 }
 func (asciiNum) EncodeBody(dst []byte, v Value, def *FieldDef) ([]byte, error) {
@@ -58,7 +58,7 @@ func (asciiNum) Name() string { return "num.ascii" }
 // asciiAmount — amount.ascii (KindAmount). Unsigned, zero-padded minor units.
 type asciiAmount struct{ scale uint8 }
 
-func (c asciiAmount) DecodeBody(body []byte, _ *FieldDef) (Value, error) {
+func (c asciiAmount) DecodeBody(body []byte, _ int, _ *FieldDef) (Value, error) {
 	n, err := strconv.ParseInt(string(body), 10, 64)
 	if err != nil {
 		return Value{}, fmt.Errorf("amount: %w", err)
@@ -79,7 +79,7 @@ func (asciiAmount) Name() string { return "amount.ascii" }
 // binBytes — b.raw (KindBytes). Fixed fields are NUL-padded on the right.
 type binBytes struct{}
 
-func (binBytes) DecodeBody(body []byte, _ *FieldDef) (Value, error) {
+func (binBytes) DecodeBody(body []byte, _ int, _ *FieldDef) (Value, error) {
 	return Value{raw: body, kind: KindBytes}, nil
 }
 func (binBytes) EncodeBody(dst []byte, v Value, def *FieldDef) ([]byte, error) {
