@@ -34,8 +34,12 @@ var (
 // Components may also be added and removed while the host runs via [Host.Deploy]
 // and [Host.Undeploy].
 //
-// All lifecycle methods are serialised; a Component's Start or Stop must not
-// call back into its Host.
+// All lifecycle methods are serialised on a single lock; a Component's Start or
+// Stop must not call back into its Host *synchronously* (within the Start/Stop
+// call itself), which would re-enter the non-reentrant lock. A component may
+// freely interact with the host from its own background goroutines after Start
+// returns — that is ordinary lock contention, not re-entrancy, and is how the
+// [Deployer] drives Deploy/Undeploy.
 type Host struct {
 	env             *Env
 	shutdownTimeout time.Duration
@@ -119,8 +123,11 @@ func (h *Host) Start(ctx context.Context) error {
 	}
 	for _, name := range h.order {
 		if err := h.startOne(ctx, name); err != nil {
-			h.stopStarted(ctx)
-			return fmt.Errorf("runtime: start %q: %w", name, err)
+			startErr := fmt.Errorf("runtime: start %q: %w", name, err)
+			if unwindErr := h.stopStarted(ctx); unwindErr != nil {
+				return errors.Join(startErr, unwindErr)
+			}
+			return startErr
 		}
 	}
 	h.started = true
@@ -139,15 +146,20 @@ func (h *Host) startOne(ctx context.Context, name string) error {
 }
 
 // stopStarted stops running components in reverse registration order, used to
-// unwind a partial Start. Caller holds mu.
-func (h *Host) stopStarted(ctx context.Context) {
+// unwind a partial Start. It returns the joined stop errors so Start can surface
+// them alongside the original start failure. Caller holds mu.
+func (h *Host) stopStarted(ctx context.Context) error {
+	var errs []error
 	for i := len(h.order) - 1; i >= 0; i-- {
 		name := h.order[i]
 		if _, ok := h.running[name]; !ok {
 			continue
 		}
-		h.stopOne(ctx, name)
+		if err := h.stopOne(ctx, name); err != nil {
+			errs = append(errs, fmt.Errorf("unwind stop %q: %w", name, err))
+		}
 	}
+	return errors.Join(errs...)
 }
 
 // stopOne stops a single component and clears its running mark. Caller holds mu.

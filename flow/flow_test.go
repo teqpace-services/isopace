@@ -282,6 +282,31 @@ func TestFlowRetryExhaustsAndAborts(t *testing.T) {
 	}
 }
 
+func TestFlowRetryHonoursContextCancelDuringBackoff(t *testing.T) {
+	fail := errors.New("transient")
+	inner := flow.Func("flaky", func(_ context.Context, _ *flow.Exchange) (flow.Result, error) {
+		return flow.Continue(), fail
+	})
+	// A long backoff would hang if the timer were not stopped on cancel.
+	policy := flow.RetryPolicy{MaxAttempts: 5, Backoff: func(int) time.Duration { return time.Hour }}
+	f := flow.New(flow.WithLogger(quietLogger()))
+	f.Group("main", flow.Retry(inner, policy))
+
+	ctx, cancel := context.WithCancel(context.Background())
+	go func() {
+		time.Sleep(20 * time.Millisecond)
+		cancel()
+	}()
+	start := time.Now()
+	err := f.Run(ctx, newExchange(t))
+	if d := time.Since(start); d > 2*time.Second {
+		t.Errorf("retry did not abort promptly on cancel (took %v)", d)
+	}
+	if !errors.Is(err, context.Canceled) {
+		t.Errorf("Run err = %v want context.Canceled", err)
+	}
+}
+
 func TestFlowIdempotentReplay(t *testing.T) {
 	log := &eventLog{}
 	store := flow.NewMemoryStore()
