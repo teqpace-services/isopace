@@ -1,0 +1,23 @@
+{
+  "id": "iso87-b-generic",
+  "mti": "num.bcd",
+  "bitmap": { "codec": "bitmap.bin", "levels": 2 },
+  "composites": {
+    "emv-55": {
+      "tags": {
+        "9F26": { "name": "Application Cryptogram", "codec": "b.raw" },
+        "9F36": { "name": "Application Transaction Counter", "codec": "num.bin", "max": 2 },
+        "95":   { "name": "Terminal Verification Results", "codec": "b.raw", "max": 5 }
+      }
+    }
+  },
+  "fields": {
+    "2":  { "name": "Primary Account Number", "codec": "num.bcd",    "length": "len.ll.bcd",  "max": 19 },
+    "3":  { "name": "Processing Code",        "codec": "num.bcd",    "length": "len.fixed",   "max": 6 },
+    "4":  { "name": "Amount, Transaction",    "codec": "amount.bcd", "length": "len.fixed",   "max": 12, "scale": 0 },
+    "11": { "name": "System Trace Audit Nr",  "codec": "num.bcd",    "length": "len.fixed",   "max": 6 },
+    "39": { "name": "Response Code",          "codec": "char.ascii", "length": "len.fixed",   "max": 2 },
+    "41": { "name": "Card Acceptor Terminal", "codec": "char.ascii", "length": "len.fixed",   "max": 8 },
+    "55": { "name": "ICC Data",               "composite": "emv-55", "length": "len.lll.bcd" }
+  }
+}
