@@ -29,8 +29,32 @@ jobs:
         run: go vet ./...
       - name: Build
         run: go build ./...
-      - name: Test
+      - name: Test (race + seed corpora)
+        # -race covers data races and the goroutine-leak checks in the transport
+        # tests; running the test suite also exercises every fuzz target's seed
+        # corpus once.
         run: go test -race ./...
+      - name: Benchmarks (compile + smoke)
+        run: go test -run=^$ -bench=. -benchtime=1x ./...
+
+  fuzz-smoke:
+    name: Fuzz Smoke
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.26'
+          check-latest: true
+      # Short fuzzing of the wire-facing parsers to catch panics on hostile input.
+      - name: Fuzz path parser
+        run: go test ./iso8583/ -run=^$ -fuzz=FuzzParsePath -fuzztime=30s
+      - name: Fuzz unmarshal/marshal
+        run: go test ./iso8583/ -run=^$ -fuzz=FuzzUnmarshalMarshal -fuzztime=30s
+      - name: Fuzz profile round-trip
+        run: go test ./conformance/ -run=^$ -fuzz=FuzzProfileRoundTrip -fuzztime=30s
+      - name: Fuzz BER-TLV
+        run: go test ./fieldcodec/tlv/ -run=^$ -fuzz=FuzzBERTLV -fuzztime=30s
 
   license-scan:
     name: Dependency License Scan
