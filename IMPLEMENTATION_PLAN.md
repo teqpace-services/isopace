@@ -3,7 +3,7 @@
 > **Living document.** Status colours are updated as work lands. The detailed
 > design each phase implements lives in [`ARCHITECTURE.md`](ARCHITECTURE.md).
 >
-> **Last updated:** 2026-06-01 (Phases 0–4 landed: core, codecs, profiles, renderings)
+> **Last updated:** 2026-06-01 (Phases 0–6 landed: core, codecs, profiles, renderings, QA, transport)
 
 ---
 
@@ -33,7 +33,7 @@ tests (and fuzz/bench where noted) pass, SPDX header present, public API matches
 | 3 | Packager profiles (`packager/`) | 🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩 | 100 |
 | 4 | Alternate renderings (`render/`) | 🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩 | 100 |
 | 5 | Conformance & QA harness | 🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩 | 100 |
-| 6 | Transport (`link/`, `listener/`, `switch/`) | ⬜⬜⬜⬜⬜⬜⬜⬜⬜⬜ | 0 |
+| 6 | Transport (`link/`, `listener/`, `mux/`) | 🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩 | 100 |
 | 7 | Runtime (`runtime/`) | ⬜⬜⬜⬜⬜⬜⬜⬜⬜⬜ | 0 |
 | 8 | Processing / TX manager (`flow/`) | ⬜⬜⬜⬜⬜⬜⬜⬜⬜⬜ | 0 |
 | 9 | Coordination (`space/`) | ⬜⬜⬜⬜⬜⬜⬜⬜⬜⬜ | 0 |
@@ -198,12 +198,24 @@ The dependency-free heart. Built in slices so each compiles and tests green.
 
 | Status | Task |
 |:------:|------|
-| ⚪ | `Link` — TCP connection, length framing, keep-alive, filters |
-| ⚪ | `Listener` — server, accept loop, per-conn lifecycle |
-| ⚪ | `Switch` — MUX: request↔response matching, timeouts |
-| ⚪ | Connection pool — health filtering, reconnect (backoff) |
-| ⚪ | TLS / mutual TLS |
-| ⚪ | Transport tests + loopback integration |
+| 🟢 | `Link` — TCP connection, length framing, keep-alive, filters | `link/` |
+| 🟢 | `Listener` — server, accept loop, per-conn lifecycle, graceful shutdown | `listener/` |
+| 🟢 | `Switch` → `mux/` (renamed: `switch` is a Go keyword) — request↔response matching, timeouts | `mux/` |
+| 🟢 | Connection pool — health filtering, reconnect (backoff) | `link.Pool` |
+| 🟢 | TLS / mutual TLS | `link.WithTLS` / `listener.WithTLS` |
+| 🟢 | Transport tests + loopback integration (+ goroutine-leak checks) | `*_test.go` |
+
+> **Done:** `link.Link` is a framed connection (pluggable `Framer`, default
+> big-endian length-prefix; ordered `Filter`s; TLS via `WithTLS`; concurrent-safe
+> `Send`, single-reader `Receive`). `listener` runs the accept loop with
+> graceful shutdown (closes active links, waits for handlers). `mux` (named so
+> because `switch` is a Go keyword) correlates request/response over one link by
+> a `Keyer` (default `FieldKeyer(codec, 11, 41)` = STAN + terminal), with
+> per-request timeout/context, a background reader, and an unsolicited handler.
+> `link.Pool` round-robins healthy links and reconnects failed slots with
+> exponential backoff. Loopback integration tests over real localhost TCP cover
+> concurrent correlation, timeout, close-unblocks-pending, and **goroutine-leak
+> checks**; all green under `-race`. Stdlib-only (`net`/`crypto/tls`).
 
 ---
 
