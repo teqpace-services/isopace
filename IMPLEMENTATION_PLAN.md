@@ -3,7 +3,7 @@
 > **Living document.** Status colours are updated as work lands. The detailed
 > design each phase implements lives in [`ARCHITECTURE.md`](ARCHITECTURE.md).
 >
-> **Last updated:** 2026-06-01 (Phases 0–6 landed: core, codecs, profiles, renderings, QA, transport)
+> **Last updated:** 2026-06-01 (Phases 0–9 landed: core, codecs, profiles, renderings, QA, transport, runtime, flow, space — reviewed)
 
 ---
 
@@ -34,9 +34,9 @@ tests (and fuzz/bench where noted) pass, SPDX header present, public API matches
 | 4 | Alternate renderings (`render/`) | 🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩 | 100 |
 | 5 | Conformance & QA harness | 🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩 | 100 |
 | 6 | Transport (`link/`, `listener/`, `mux/`) | 🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩 | 100 |
-| 7 | Runtime (`runtime/`) | ⬜⬜⬜⬜⬜⬜⬜⬜⬜⬜ | 0 |
-| 8 | Processing / TX manager (`flow/`) | ⬜⬜⬜⬜⬜⬜⬜⬜⬜⬜ | 0 |
-| 9 | Coordination (`space/`) | ⬜⬜⬜⬜⬜⬜⬜⬜⬜⬜ | 0 |
+| 7 | Runtime (`runtime/`) | 🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩 | 100 |
+| 8 | Processing / TX manager (`flow/`) | 🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩 | 100 |
+| 9 | Coordination (`space/`) | 🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩 | 100 |
 | 10 | Security / HSM (`vault/`) | ⬜⬜⬜⬜⬜⬜⬜⬜⬜⬜ | 0 |
 | 11 | Enterprise / Ops | ⬜⬜⬜⬜⬜⬜⬜⬜⬜⬜ | 0 |
 | 12 | Release engineering (v0.1.0) | ⬜⬜⬜⬜⬜⬜⬜⬜⬜⬜ | 0 |
@@ -221,36 +221,70 @@ The dependency-free heart. Built in slices so each compiles and tests green.
 
 ## Phase 7 — Runtime (`runtime/`)
 
-| Status | Task |
-|:------:|------|
-| ⚪ | Component host + lifecycle (start/stop hooks) |
-| ⚪ | Deploy descriptors + hot (re)deploy |
-| ⚪ | Config loading (YAML/env, hot reload) |
-| ⚪ | Structured logging (`slog`) |
-| ⚪ | OpenTelemetry traces/metrics |
+| Status | Task | File |
+|:------:|------|------|
+| 🟢 | Component host + lifecycle (ordered start, reverse stop, partial-start unwind, Deploy/Undeploy, Run) | `host.go`, `component.go` |
+| 🟢 | Deploy descriptors + hot (re)deploy (Descriptor/Factory/Registry + Deployer dir reconcile) | `deploy.go` |
+| 🟢 | Config loading (JSON + env overrides, dotted-path getters, struct Unmarshal, atomic hot reload) | `config.go`, `watch.go` |
+| 🟢 | Structured logging (`slog`) — text/JSON handlers, level parsing | `log.go` |
+| 🟢 | Observability — `Observer` facade (spans/counters/histograms), no-op + slog backends | `observe.go` |
+
+> **Done:** the component host starts in registration order and stops in
+> reverse, unwinds a partial start (joining stop errors), and supports
+> Deploy/Undeploy while running; `Run` blocks on context then stops within a
+> shutdown timeout. The `Deployer` reconciles a directory of JSON descriptors
+> onto the host and rescans for hot redeploy (building a new component before
+> tearing down the old). Config is a JSON tree with env-prefix overrides
+> (skipping malformed scalar collisions) and atomic `Reload` via `ConfigWatcher`.
+> `go test -race` green; goroutine-leak-checked. **Dependency note:** YAML is a
+> documented drop-in over the same tree, and **OpenTelemetry is abstracted
+> behind `Observer`** with no-op/slog defaults — a real OTel exporter is a
+> drop-in adapter, so the module stays **stdlib-only** (zero third-party deps).
 
 ---
 
 ## Phase 8 — Processing / transaction manager (`flow/`)
 
-| Status | Task |
-|:------:|------|
-| ⚪ | `Flow` + `Stage` pipeline, `Exchange` state |
-| ⚪ | prepare / commit / abort semantics |
-| ⚪ | Group selectors / conditional routing |
-| ⚪ | Journaling + retry + idempotency |
-| ⚪ | Profiler / per-stage timing |
+| Status | Task | File |
+|:------:|------|------|
+| 🟢 | `Flow` + `Stage` pipeline, `Exchange` state | `flow.go`, `stage.go`, `exchange.go` |
+| 🟢 | prepare / commit / abort semantics (two-phase, reverse rollback) | `flow.go`, `stage.go` |
+| 🟢 | Group selectors / conditional routing (`Route`, worklist, loop cap) | `flow.go`, `stage.go` |
+| 🟢 | Journaling + retry + idempotency | `journal.go`, `retry.go`, `idempotency.go` |
+| 🟢 | Profiler / per-stage timing | `exchange.go`, `flow.go` |
+
+> **Done:** transactions run through named groups in two phases over the
+> immutable copy-on-write `Message`: a prepare pass (with conditional routing)
+> then a commit pass over joined stages in order, or an abort pass over them in
+> reverse if any stage fails (a stage that reserved work and then aborts still
+> joins, so its rollback runs). `Exchange` carries request/response, a property
+> bag, abort state and per-stage timings (`Profile()`). `Journal` records the
+> lifecycle (basis for store-and-forward recovery); `WithIdempotency` replays the
+> stored response for a duplicate (clone-on-store/lookup); `Retry` re-runs
+> Prepare with ctx-aware backoff; `WithMaxStages` guards routing loops. `go test
+> -race` green; stdlib-only.
 
 ---
 
 ## Phase 9 — Coordination (`space/`)
 
-| Status | Task |
-|:------:|------|
-| ⚪ | `Space` interface (in / out / rd / take) |
-| ⚪ | In-process backend (channels) |
-| ⚪ | Distributed backend — **NATS / JetStream** |
-| ⚪ | Persistent store-and-forward |
+| Status | Task | File |
+|:------:|------|------|
+| 🟢 | `Space` interface (Out / In = take / Rd = read / Inp / Rdp), context-bounded blocking | `space.go` |
+| 🟢 | In-process backend (mutex map + close-and-replace broadcast wakeups) | `local.go` |
+| 🟢 | Distributed backend — **NATS / JetStream** (abstracted: implements `Space`; adapter is a drop-in module) | `doc.go` |
+| 🟢 | Persistent store-and-forward (crash-safe append log, replay, compaction) | `store.go` |
+
+> **Done:** a keyed tuple space where each key is a FIFO bag (a queue), with
+> `Out`/`In`(take)/`Rd`(read) plus non-blocking `Inp`/`Rdp`; blocking calls are
+> context-cancelable and waiters wake via a close-and-replace broadcast (no
+> per-call goroutine). `Local` is the in-process backend; `Store` is durable
+> store-and-forward — a `[]byte` queue over a crash-safe append-only log
+> (tombstone fsync'd before an entry leaves memory; truncated tail ignored on
+> replay; `Compact` rewrites live entries with dir-fsync'd atomic rename).
+> `go test -race` green; concurrent exactly-once + goroutine-leak checked.
+> **Dependency note:** the **NATS/JetStream backend is a drop-in `Space`
+> adapter** in a separate optional module, keeping the core **stdlib-only**.
 
 ---
 
