@@ -46,21 +46,27 @@ type AuthRequest struct {
 	Currency    string // DE 49, ISO 4217 numeric currency code (e.g. "840")
 }
 
-// Encode builds and marshals a 0200 authorization request.
+// Encode builds and marshals a 0200 authorization request. It returns an error
+// for invalid field values (the inputs are caller/flag-supplied, not trusted).
 func (r AuthRequest) Encode(c *iso8583.Codec) ([]byte, error) {
 	m := iso8583.New(Schema())
-	set := func(de int, v any) {
-		if err := m.Set(de, v); err != nil {
-			panic(fmt.Sprintf("posdemo: set DE %d: %v", de, err)) // demo inputs are static
+	fields := []struct {
+		de int
+		v  any
+	}{
+		{0, "0200"},
+		{2, r.PAN},
+		{3, "000000"}, // processing code: purchase
+		{4, r.AmountMinor},
+		{11, int64(r.STAN)},
+		{41, r.Terminal},
+		{49, r.Currency},
+	}
+	for _, f := range fields {
+		if err := m.Set(f.de, f.v); err != nil {
+			return nil, fmt.Errorf("posdemo: set DE %d: %w", f.de, err)
 		}
 	}
-	set(0, "0200")
-	set(2, r.PAN)
-	set(3, "000000") // processing code: purchase
-	set(4, r.AmountMinor)
-	set(11, int64(r.STAN))
-	set(41, r.Terminal)
-	set(49, r.Currency)
 	return c.Marshal(m, nil)
 }
 
