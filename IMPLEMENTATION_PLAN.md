@@ -3,7 +3,7 @@
 > **Living document.** Status colours are updated as work lands. The detailed
 > design each phase implements lives in [`ARCHITECTURE.md`](ARCHITECTURE.md).
 >
-> **Last updated:** 2026-06-01 (Phases 0–9 landed: core, codecs, profiles, renderings, QA, transport, runtime, flow, space — reviewed)
+> **Last updated:** 2026-06-01 (Phases 0–10 landed: core … runtime, flow, space, vault — reviewed)
 
 ---
 
@@ -37,7 +37,7 @@ tests (and fuzz/bench where noted) pass, SPDX header present, public API matches
 | 7 | Runtime (`runtime/`) | 🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩 | 100 |
 | 8 | Processing / TX manager (`flow/`) | 🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩 | 100 |
 | 9 | Coordination (`space/`) | 🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩 | 100 |
-| 10 | Security / HSM (`vault/`) | ⬜⬜⬜⬜⬜⬜⬜⬜⬜⬜ | 0 |
+| 10 | Security / HSM (`vault/`) | 🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩 | 100 |
 | 11 | Enterprise / Ops | ⬜⬜⬜⬜⬜⬜⬜⬜⬜⬜ | 0 |
 | 12 | Release engineering (v0.1.0) | ⬜⬜⬜⬜⬜⬜⬜⬜⬜⬜ | 0 |
 
@@ -290,15 +290,34 @@ The dependency-free heart. Built in slices so each compiles and tests green.
 
 ## Phase 10 — Security / HSM (`vault/`)
 
-| Status | Task |
-|:------:|------|
-| ⚪ | `Vault` crypto façade |
-| ⚪ | PIN block formats + translation |
-| ⚪ | MAC generation / verification |
-| ⚪ | Key management + TR-31 key blocks |
-| ⚪ | PKCS#11 / HSM access (miekg + crypto11) |
-| ⚪ | DUKPT (X9.24) key derivation |
-| ⚪ | EMV ARQC / ARPC |
+| Status | Task | File |
+|:------:|------|------|
+| 🟢 | `Vault` crypto façade + `SoftVault` software backend | `vault.go` |
+| 🟢 | PIN block formats (ISO 9564 0/1/3) + encrypt/translate + pad validation | `pinblock.go`, `cipher.go` |
+| 🟢 | MAC generation/verification (ISO 9797-1 alg 1 & 3) + CMAC | `mac.go`, `cmac.go` |
+| 🟢 | Key management + TR-31 version B key blocks (wrap/unwrap) | `keyblock.go` |
+| 🟢 | PKCS#11 / HSM access (abstracted: HSM is a drop-in `Vault` adapter module) | `vault.go`, `doc.go` |
+| 🟢 | DUKPT (ANSI X9.24-1 TDES) key derivation — validated vs public vector | `dukpt.go` |
+| 🟢 | EMV ARQC / ARPC (Common Session Key) | `emv.go` |
+
+> **Done:** stdlib-only payment cryptography (`crypto/des`, `crypto/aes`,
+> `crypto/cipher`, `crypto/subtle`) behind a `Vault` façade. PIN blocks (ISO
+> 9564 formats 0/1/3) with encode/decode/translate and decode-time pad-integrity
+> checks; MAC (ISO 9797-1 algorithm 1 and the X9.19 retail MAC, padding methods
+> 1/2) with constant-time verify, plus CMAC; DUKPT (X9.24-1 TDES) IPEK and
+> per-transaction derivation **validated against the canonical public X9.24
+> vector**; TR-31 version B key blocks (CMAC-derived keys, MAC-as-IV, tamper
+> detection); EMV Common Session Key + ARQC/ARPC. `SoftVault` holds keys in
+> memory; `go test -race` green; zero third-party deps.
+>
+> **SECURITY / dependency notes:** SoftVault is for development, testing, and
+> conformance only — production PIN and key handling must use a certified **HSM,
+> which is a drop-in `Vault` adapter (e.g. PKCS#11 via cgo) in a separate
+> optional module**, so the core stays stdlib-only (the `miekg/crypto11` route
+> would be that adapter, not a core dependency). AES successors (ISO 9564 format
+> 4, TR-31 version D) are noted as future. TR-31 wrap/unwrap is self-consistent
+> and tamper-evident; external-vector interop validation is pending a published
+> version-B vector.
 
 ---
 
