@@ -3,7 +3,7 @@
 > **Living document.** Status colours are updated as work lands. The detailed
 > design each phase implements lives in [`ARCHITECTURE.md`](ARCHITECTURE.md).
 >
-> **Last updated:** 2026-06-01 (Phase 0 closed; Phase 1 `iso8583/` core landed)
+> **Last updated:** 2026-06-01 (Phases 0–3 landed: core, codec catalogs, profiles)
 
 ---
 
@@ -30,7 +30,7 @@ tests (and fuzz/bench where noted) pass, SPDX header present, public API matches
 | 0 | Project foundation | 🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩 | 100 |
 | 1 | ISO-8583 core (`iso8583/`) | 🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩 | 100 |
 | 2 | Codec catalogs (`fieldcodec/`, `lengthcodec/`) | 🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩 | 100 |
-| 3 | Packager profiles (`packager/`) | ⬜⬜⬜⬜⬜⬜⬜⬜⬜⬜ | 0 |
+| 3 | Packager profiles (`packager/`) | 🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩 | 100 |
 | 4 | Alternate renderings (`render/`) | ⬜⬜⬜⬜⬜⬜⬜⬜⬜⬜ | 0 |
 | 5 | Conformance & QA harness | ⬜⬜⬜⬜⬜⬜⬜⬜⬜⬜ | 0 |
 | 6 | Transport (`link/`, `listener/`, `switch/`) | ⬜⬜⬜⬜⬜⬜⬜⬜⬜⬜ | 0 |
@@ -129,13 +129,24 @@ The dependency-free heart. Built in slices so each compiles and tests green.
 
 | Status | Task | File |
 |:------:|------|------|
-| ⚪ | ISO 8583:1987 — variants A / B / C | `iso87.go` |
-| ⚪ | ISO 8583:1993 — variants A / B | `iso93.go` |
-| ⚪ | Visa Base I (overlay on iso93) | `visa.go` |
-| ⚪ | Mastercard (overlay) | `mastercard.go` |
-| ⚪ | Generic YAML/JSON schema loader (codec-by-name) | `generic.go` |
-| ⚪ | Embedded declarative schema sources | `schemadef/*.yaml` |
-| ⚪ | Profile round-trip tests | `*_test.go` |
+| 🟢 | ISO 8583:1987 — variants A / B / C | `iso87.go` |
+| 🟢 | ISO 8583:1993 — variants A / B | `iso93.go` |
+| 🟢 | Visa Base I (overlay on iso93) | `visa.go` |
+| 🟢 | Mastercard (overlay) | `mastercard.go` |
+| 🟢 | Generic JSON schema loader (codec-by-name); YAML is a drop-in | `generic.go` |
+| 🟢 | Embedded declarative schema sources (`packager/schemadef/*.json`) | `schemadef/*.json` |
+| 🟢 | Profile round-trip + overlay + EMV tests | `*_test.go` |
+
+> **Done:** profiles assemble from a shared, representation-independent DE
+> directory; A/B/C and 93 A/B differ only by a `rep` (codec/length/bitmap set).
+> Scheme dialects are `Derive`/`Override` deltas (Visa DE 62/63 binary;
+> Mastercard DE 48/63). The generic loader resolves codecs by name against
+> `DefaultRegistry()` and produces an identical `*Schema`, including BER-TLV
+> composites. All 7 profiles round-trip (incl. EMV `55.9F26`); `go test -race`
+> green; stdlib-only. Notes: the DE directory is a representative working subset
+> (not all 128 DEs); EBCDIC amounts use the ASCII amount codec (no `amount.ebcdic`
+> in the catalog yet); `schemadef/` lives under `packager/` for `go:embed`; YAML
+> config is a drop-in once a permissive YAML dependency is added.
 
 ---
 
