@@ -7,31 +7,7 @@ All notable changes to Isopace are recorded here. The format is based on
 
 ## [Unreleased]
 
-### Added
-
-- **Concrete site packagers — `zone`, `fields`, `switch`.** Three deployment
-  layouts that pin each field to one value codec and one length discipline,
-  added to the catalog as both programmatic profiles (`packager.Zone()`,
-  `Fields()`, `Switch()`, registered in `Profiles()`) and editable JSON
-  (`packager/schemadef/{zone,fields,switch}.json`), generated from one field
-  table so the two forms cannot drift. Their **DE 127** is a nested subfield
-  group — a headerless sub-bitmap plus positional subfields — so `127.2`,
-  `127.22`, … are addressable like `55.9F26`. New supporting catalog primitives:
-  the `subfield.iso` positional subfield composite codec (`fieldcodec/subfield`),
-  the `b.hex` ASCII-hex binary value codec, the `len.lllll.ascii` /
-  `len.llllll.ascii` 5-/6-digit length prefixes, and `SchemaBuilder.Headerless()`
-  for MTI-less subfield groups.
-- **`vault.SealedVault`** — a hardened software `Vault`: working keys are
-  encrypted at rest under a caller-supplied key-encryption key (AES-GCM),
-  decrypted only transiently and zeroized after each operation (including the
-  cleartext PIN block), with key check values, per-key usage enforcement, and an
-  audit hook. It implements the same `Vault` interface as `SoftVault`. It raises
-  the bar for software key storage and non-PIN crypto but is still **not** a
-  certified HSM substitute for PCI PIN / P2PE.
-- **`COMMERCIAL-AGREEMENT.md`** — a draft commercial-license template (pending
-  legal-counsel review).
-- **`.air.toml`** — live-reload config for the `simulator` example (dev tool;
-  not a module dependency).
+_Nothing yet._
 
 ## [0.1.0] - 2026-06-01
 
@@ -51,7 +27,13 @@ tested under `go test -race`.
   codecs: ASCII / EBCDIC (CP037/CP1047) / packed-BCD / binary, amount and bitmap
   codecs, and a BER-TLV composite for EMV field 55, all resolvable by name.
 - **Packager profiles (`packager`)** — ISO 8583:1987 A/B/C, 1993 A/B, Visa and
-  Mastercard overlays, and a declarative JSON loader (`go:embed`).
+  Mastercard overlays, three concrete site layouts (`zone`, `fields`, `switch` —
+  the last with **DE 127** as a headerless positional-subfield group, so `127.2`,
+  `127.22`, … address like `55.9F26`), and a declarative JSON loader (`go:embed`)
+  whose schemas are generated from the same field tables so the two forms cannot
+  drift. Supporting catalog primitives: the `subfield.iso` positional-subfield
+  composite codec, the `b.hex` ASCII-hex binary codec, 5-/6-digit length prefixes
+  (`len.lllll.ascii` / `len.llllll.ascii`), and `SchemaBuilder.Headerless()`.
 - **Alternate renderings (`render`)** — schema-aware JSON (PAN masking, TLV
   nesting), a descriptor-driven protobuf wire codec, and an ISO 20022 pacs.008
   bridge — all from one read-only `View`.
@@ -71,8 +53,12 @@ tested under `go test -race`.
   backend and a durable, crash-safe store-and-forward `Store`.
 - **Security (`vault`)** — ISO 9564 PIN blocks, ISO 9797-1 MAC (incl. retail
   MAC) and CMAC, DUKPT (ANSI X9.24-1, validated against the public test vector),
-  TR-31 version B key blocks, and EMV ARQC/ARPC, behind a `Vault` façade
-  (`SoftVault` software backend; HSM/PKCS#11 as a drop-in adapter).
+  TR-31 version B key blocks, and EMV ARQC/ARPC, behind a `Vault` façade. Two
+  software backends: `SoftVault` (keys in memory) and the hardened `SealedVault`
+  (working keys encrypted at rest under a caller-supplied KEK via AES-GCM,
+  decrypted only transiently and zeroized after each operation, with key check
+  values, per-key usage enforcement, and an audit hook); HSM/PKCS#11 is a drop-in
+  adapter.
 - **Enterprise / ops (`rbac`, `store`, `ops`)** — role-based access control with
   PBKDF2 credentials and constant-time authentication; a collection/key/value
   persistence `Store`; and an operational surface with health checks, a metrics
@@ -81,6 +67,10 @@ tested under `go test -race`.
 - **Examples** — runnable `acquirer` and `issuer` programs, a `simulator` test
   host assembled from `runtime` + `ops` + transport, and the shared `posdemo`
   library with an end-to-end loopback test.
+- **Project governance & tooling** — dual-license scaffolding (AGPLv3 +
+  commercial CLA, `NOTICE`, `AUTHORS`, `SECURITY.md`), a draft commercial-license
+  template (`COMMERCIAL-AGREEMENT.md`, pending counsel review), and an `.air.toml`
+  live-reload config for the `simulator` (dev tooling, not a module dependency).
 
 ### Security notes
 
