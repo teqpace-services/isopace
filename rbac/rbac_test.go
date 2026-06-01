@@ -22,7 +22,7 @@ import (
 )
 
 func TestPolicyAuthorization(t *testing.T) {
-	p := rbac.NewPolicy()
+	p := rbac.NewPolicy(rbac.WithIterations(1)) // no credentials exercised here
 	p.AddRole("operator", "tx:read", "tx:reverse")
 	p.AddRole("admin", "admin:*")
 	p.AddRole("super", "*")
@@ -55,7 +55,7 @@ func TestPolicyAuthorization(t *testing.T) {
 }
 
 func TestPolicyGrantRevokeRoles(t *testing.T) {
-	p := rbac.NewPolicy()
+	p := rbac.NewPolicy(rbac.WithIterations(1)) // no credentials exercised here
 	p.AddRole("r", "x:y")
 	p.AddUser("u")
 	if p.Can("u", "x:y") {
@@ -99,6 +99,12 @@ func TestCredentialsAuthenticate(t *testing.T) {
 	}
 	if p.Authenticate("ghost", "x") {
 		t.Error("unknown user authenticated")
+	}
+	// A user with no password set must not authenticate (and must take the
+	// constant-time dummy path, not an early map-miss return).
+	p.AddUser("nopw", "admin")
+	if p.Authenticate("nopw", "anything") {
+		t.Error("password-less user authenticated")
 	}
 	if err := p.SetPassword("ghost", "x"); !errors.Is(err, rbac.ErrNoSuchUser) {
 		t.Errorf("SetPassword unknown user = %v want ErrNoSuchUser", err)

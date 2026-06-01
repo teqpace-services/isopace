@@ -37,6 +37,7 @@ type Policy struct {
 	roles      map[string]map[Permission]struct{}
 	users      map[string]*userRec
 	iterations int
+	dummy      *Credential // for constant-time Authenticate of unknown users
 }
 
 type userRec struct {
@@ -66,6 +67,12 @@ func NewPolicy(opts ...Option) *Policy {
 	}
 	for _, o := range opts {
 		o(p)
+	}
+	// A dummy credential at the policy's work factor lets Authenticate do
+	// equivalent PBKDF2 work for unknown users, so response time does not reveal
+	// whether a user exists.
+	if d, err := hashPassword("", p.iterations); err == nil {
+		p.dummy = &d
 	}
 	return p
 }
@@ -137,7 +144,8 @@ func (p *Policy) SetPassword(user, password string) error {
 }
 
 // Authenticate reports whether the user exists, has a password set, and the
-// password matches.
+// password matches. It performs equivalent PBKDF2 work whether or not the user
+// exists, so timing does not reveal which usernames are registered.
 func (p *Policy) Authenticate(user, password string) bool {
 	p.mu.RLock()
 	rec, ok := p.users[user]
@@ -145,8 +153,12 @@ func (p *Policy) Authenticate(user, password string) bool {
 	if ok {
 		cred = rec.cred
 	}
+	dummy := p.dummy
 	p.mu.RUnlock()
-	if !ok || cred == nil {
+	if cred == nil {
+		if dummy != nil {
+			_ = dummy.Verify(password) // constant-time defence; result discarded
+		}
 		return false
 	}
 	return cred.Verify(password)
