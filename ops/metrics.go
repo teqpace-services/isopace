@@ -33,6 +33,7 @@ import (
 type Metrics struct {
 	mu     sync.Mutex
 	series map[string]*series
+	kinds  map[string]metricKind // metric name -> its single kind
 }
 
 type metricKind int
@@ -66,7 +67,9 @@ type series struct {
 var _ runtime.Observer = (*Metrics)(nil)
 
 // NewMetrics returns an empty metrics registry.
-func NewMetrics() *Metrics { return &Metrics{series: map[string]*series{}} }
+func NewMetrics() *Metrics {
+	return &Metrics{series: map[string]*series{}, kinds: map[string]metricKind{}}
+}
 
 // Counter returns a counter instrument by name (runtime.Observer).
 func (m *Metrics) Counter(name string) runtime.Counter { return counterHandle{m, name} }
@@ -138,6 +141,17 @@ func (m *Metrics) update(kind metricKind, name string, attrs []runtime.Attr, fn 
 	key := seriesKey(name, sorted)
 	m.mu.Lock()
 	defer m.mu.Unlock()
+	// A metric name is bound to one kind, so the Prometheus exposition stays
+	// valid (a name cannot carry two # TYPE lines). Reusing a name as a
+	// different kind is a deterministic instrumentation bug; panic like the
+	// Prometheus client does rather than emit malformed output.
+	if existing, ok := m.kinds[name]; ok {
+		if existing != kind {
+			panic(fmt.Sprintf("ops: metric %q used as %s but already registered as %s", name, kind, existing))
+		}
+	} else {
+		m.kinds[name] = kind
+	}
 	s := m.series[key]
 	if s == nil {
 		s = &series{name: name, kind: kind, labels: sorted}

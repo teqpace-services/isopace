@@ -126,6 +126,15 @@ func (a *API) handleInfo(w http.ResponseWriter, _ *http.Request) {
 
 // protect wraps a handler with Basic-auth and a permission check when a policy
 // is configured; without a policy the handler is served directly.
+//
+// Failures return 401 (unauthenticated) and authorization failures return 403
+// (authenticated but lacking the permission) — the correct HTTP semantics.
+// Because rbac.Authenticate runs in constant time and returns the same 401 for
+// both an unknown user and a wrong password, username enumeration is not
+// possible; a 403 only follows a valid credential. The remaining consideration
+// is that a 403 confirms a supplied credential is valid, so a publicly exposed
+// admin API should additionally be fronted by network controls (mTLS, an
+// allow-list, or a private network) rather than relying on these checks alone.
 func (a *API) protect(perm rbac.Permission, next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if a.policy == nil {
