@@ -1,0 +1,53 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  build-test:
+    name: Build & Test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.26'
+          check-latest: true
+      - name: Verify formatting
+        run: |
+          fmt_out="$(gofmt -l .)"
+          if [ -n "$fmt_out" ]; then
+            echo "These files are not gofmt-clean:"; echo "$fmt_out"; exit 1
+          fi
+      - name: Vet
+        run: go vet ./...
+      - name: Build
+        run: go build ./...
+      - name: Test
+        run: go test -race ./...
+
+  license-scan:
+    name: Dependency License Scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.26'
+          check-latest: true
+      - name: Install go-licenses
+        run: go install github.com/google/go-licenses@latest
+      # Fail the build if any THIRD-PARTY dependency carries a copyleft
+      # (GPL/AGPL/LGPL/CDDL/MPL/SSPL-style) license. Isopace's own AGPL code is
+      # excluded via --ignore so it does not trip the check.
+      - name: Check dependency licenses
+        run: |
+          go-licenses check ./... \
+            --ignore github.com/teqpace-services/isopace \
+            --disallowed_types=forbidden,restricted

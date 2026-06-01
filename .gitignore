@@ -1,0 +1,34 @@
+# Binaries and build output
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+/bin/
+/dist/
+/build/
+
+# Test and coverage artifacts
+*.test
+*.out
+coverage.*
+/testdata/generated/
+
+# Go workspace / module cache
+go.work
+go.work.sum
+vendor/
+
+# Editor / OS noise
+.idea/
+.vscode/
+*.swp
+.DS_Store
+
+# Local secrets / config (never commit keys or HSM material)
+*.local
+*.env
+.env
+*.pem
+*.key
+secrets/
