@@ -29,7 +29,7 @@ tests (and fuzz/bench where noted) pass, SPDX header present, public API matches
 |:-:|-------|----------|:-:|
 | 0 | Project foundation | 🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩 | 100 |
 | 1 | ISO-8583 core (`iso8583/`) | 🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩 | 100 |
-| 2 | Codec catalogs (`fieldcodec/`, `lengthcodec/`) | ⬜⬜⬜⬜⬜⬜⬜⬜⬜⬜ | 0 |
+| 2 | Codec catalogs (`fieldcodec/`, `lengthcodec/`) | 🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩 | 100 |
 | 3 | Packager profiles (`packager/`) | ⬜⬜⬜⬜⬜⬜⬜⬜⬜⬜ | 0 |
 | 4 | Alternate renderings (`render/`) | ⬜⬜⬜⬜⬜⬜⬜⬜⬜⬜ | 0 |
 | 5 | Conformance & QA harness | ⬜⬜⬜⬜⬜⬜⬜⬜⬜⬜ | 0 |
@@ -104,16 +104,24 @@ The dependency-free heart. Built in slices so each compiles and tests green.
 
 | Status | Task | File |
 |:------:|------|------|
-| 🔵 | EBCDIC CP037 / CP1047 translation tables | `internal/ebcdic/` |
-| 🔵 | Packed-decimal (BCD) pack/unpack primitives | `internal/bcd/` |
-| ⚪ | Char codecs — ASCII, EBCDIC037, EBCDIC1047, UTF-8, binary | `fieldcodec/char.go` |
-| ⚪ | Numeric codecs — ASCII, BCD, rBCD, binary, EBCDIC | `fieldcodec/numeric.go` |
-| ⚪ | Amount codecs — ASCII, BCD, binary → `Decimal` | `fieldcodec/amount.go` |
-| ⚪ | Bitmap codecs — binary, hex, EBCDIC | `fieldcodec/bitmap.go` |
-| ⚪ | Length codecs — Fixed, LL/LLL/LLLL × ASCII/BCD/Binary/EBCDIC | `lengthcodec/length.go` |
-| ⚪ | BER-TLV composite (EMV DE 55), hex-tag addressing | `fieldcodec/tlv/bertlv.go` |
-| ⚪ | `Registry` + `DefaultRegistry()` (explicit population) | `fieldcodec/registry.go` |
-| ⚪ | Per-codec conformance tests (round-trip + edge cases) | `*_test.go` |
+| 🟢 | EBCDIC CP037 / CP1047 translation tables | `internal/ebcdic/` |
+| 🟢 | Packed-decimal (BCD) pack/unpack primitives (left + right aligned) | `internal/bcd/` |
+| 🟢 | Char codecs — ASCII, EBCDIC037, EBCDIC1047, UTF-8, binary | `fieldcodec/char.go` |
+| 🟢 | Numeric codecs — ASCII, EBCDIC, BCD, rBCD, binary | `fieldcodec/numeric.go` |
+| 🟢 | Amount codecs — ASCII, BCD, binary → `Decimal` | `fieldcodec/amount.go` |
+| 🟢 | Bitmap codecs — binary, hex, EBCDIC | `fieldcodec/bitmap.go` |
+| 🟢 | Length codecs — Fixed, LL/LLL/LLLL × ASCII/BCD/Binary/EBCDIC | `lengthcodec/length.go` |
+| 🟢 | BER-TLV composite (EMV DE 55), hex-tag addressing | `fieldcodec/tlv/bertlv.go` |
+| 🟢 | `Registry` + `DefaultRegistry()` (explicit population) | `fieldcodec/registry.go` |
+| 🟢 | Per-codec conformance tests (round-trip + edge cases) | `*_test.go` |
+
+> **Done:** all packages build, `go vet`/`gofmt` clean, `go test -race` green,
+> stdlib-only. Enabling core refinements landed in `iso8583/`: exported `Value`
+> constructors (so external codec packages can build canonical values), a
+> logical-unit length contract with the optional `WidthCodec` (correct packed-BCD
+> odd-digit widths), verbatim clean-field copy on Marshal, an `Amount` `Scale`
+> field, and the tag-addressed composite runtime (`NewTLV`/`PutTag`/`TagSeq`,
+> `GetP`/`SetP` tag routing) that makes `"55.9F26"` work end to end.
 
 ---
 

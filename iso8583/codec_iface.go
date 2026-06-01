@@ -45,8 +45,13 @@ package iso8583
 // separately by a LengthCodec, so value and length codecs compose orthogonally.
 type FieldCodec interface {
 	// DecodeBody interprets body (already length-delimited by the engine) into
-	// a canonical-form Value (see the contract above).
-	DecodeBody(body []byte, def *FieldDef) (Value, error)
+	// a canonical-form Value (see the contract above). units is the LOGICAL
+	// value-unit count (digits/chars/octets) — needed by packed codecs where a
+	// wire byte holds two digits, so an odd digit count cannot be recovered from
+	// the byte length alone (e.g. a 19-digit BCD PAN in 10 bytes). For fixed
+	// fields units is FieldDef.MaxLen; for variable fields it is the value read
+	// from the length prefix.
+	DecodeBody(body []byte, units int, def *FieldDef) (Value, error)
 
 	// EncodeBody appends the wire body of a canonical-form v to dst and returns
 	// the grown slice (append style; reuses dst capacity).
@@ -58,6 +63,17 @@ type FieldCodec interface {
 
 	// Name is the registry key, e.g. "char.ascii", "num.bcd", "tlv.ber".
 	Name() string
+}
+
+// WidthCodec is an OPTIONAL extension implemented by value codecs whose wire
+// byte width differs from the logical value-unit count — packed BCD holds two
+// digits per byte. The engine uses it to convert the unit count (from the
+// length prefix, or FieldDef.MaxLen for fixed fields) into the body's wire byte
+// span. Codecs that do not implement it use 1 unit == 1 wire byte.
+type WidthCodec interface {
+	FieldCodec
+	// BodyBytes returns the wire byte count occupied by units logical units.
+	BodyBytes(units int) int
 }
 
 // SpanCodec is an OPTIONAL extension implemented by codecs that can locate a
@@ -77,15 +93,17 @@ type SpanCodec interface {
 // prefix; the engine handles that case directly so MTI and fixed fields need
 // no length codec.
 //
-// Lengths are expressed in WIRE BODY BYTES. A packed (BCD) codec that reads a
-// digit count from the prefix converts to body bytes internally using def
-// (which carries the value codec), keeping the two axes orthogonal.
+// Lengths are expressed in LOGICAL VALUE UNITS (digits/chars/octets), not wire
+// bytes: the prefix on an ISO-8583 LLVAR field counts digits/characters. The
+// engine converts units to a wire byte span via the value codec's optional
+// WidthCodec (packed BCD: 2 digits per byte), defaulting to 1 unit == 1 byte.
+// This keeps the length and value axes orthogonal.
 type LengthCodec interface {
-	// ReadLen consumes the length prefix from src at off, returning the number
-	// of body bytes that follow and the offset just past the prefix.
-	ReadLen(src []byte, off int, def *FieldDef) (bodyLen, next int, err error)
-	// WriteLen appends a length prefix for a body of n wire bytes.
-	WriteLen(dst []byte, n int, def *FieldDef) ([]byte, error)
+	// ReadLen consumes the length prefix from src at off, returning the logical
+	// unit count and the offset just past the prefix.
+	ReadLen(src []byte, off int, def *FieldDef) (units, next int, err error)
+	// WriteLen appends a length prefix for a body of n logical units.
+	WriteLen(dst []byte, units int, def *FieldDef) ([]byte, error)
 	Name() string
 }
 
