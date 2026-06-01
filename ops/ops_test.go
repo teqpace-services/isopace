@@ -78,6 +78,17 @@ func TestMetricsExposition(t *testing.T) {
 	}
 }
 
+func TestMetricsKindConflictPanics(t *testing.T) {
+	m := ops.NewMetrics()
+	m.Counter("dup").Add(1)
+	defer func() {
+		if recover() == nil {
+			t.Error("expected panic when reusing a metric name as a different kind")
+		}
+	}()
+	m.Gauge("dup").Set(1) // same name, different kind → panic (keeps exposition valid)
+}
+
 func TestStaticCluster(t *testing.T) {
 	c := ops.NewStaticCluster(ops.Member{ID: "n2", Addr: "host2:5000"}, ops.Member{ID: "n1", Addr: "host1:5000"})
 	if !c.Self().Self || c.Self().ID != "n2" {
