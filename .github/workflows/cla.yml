@@ -36,4 +36,4 @@ jobs:
           path-to-document: 'https://github.com/teqpace-services/isopace/blob/main/CLA.md'
           branch: 'main'
           # TODO: add Teqpace employee GitHub usernames here.
-          allowlist: 'dependabot[bot]'
+          allowlist: 'canaan5,dependabot[bot]'
