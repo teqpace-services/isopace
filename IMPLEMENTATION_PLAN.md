@@ -3,7 +3,7 @@
 > **Living document.** Status colours are updated as work lands. The detailed
 > design each phase implements lives in [`ARCHITECTURE.md`](ARCHITECTURE.md).
 >
-> **Last updated:** 2026-06-01 (Phases 0–12 landed: **v0.1.0 feature-complete** — examples, docs, release tag)
+> **Last updated:** 2026-06-01 (Phases 0–12 landed and folded into **v0.1.0**: concrete site packagers `zone`/`fields`/`switch` with DE 127 subfields, hardened `SealedVault`, and the commercial-agreement draft merged into the 0.1.0 changelog; the release line is now on `main`)
 
 ---
 
@@ -384,12 +384,16 @@ The dependency-free heart. Built in slices so each compiles and tests green.
 
 ## Project status
 
-**🟢 v0.1.0 feature-complete.** All 13 phases (0–12) are done: 21 importable
-packages plus examples, every one `gofmt`/`go vet` clean and green under `go
-test -race`, and the module is **stdlib-only** (no third-party dependency in the
-graph; optional OTel / NATS / SQL / HSM integrations are drop-in adapters). The
-`v0.1.0` tag is local and unpushed — publishing the release (push + GitHub
-release) is the maintainer's to run.
+**🟢 v0.1.0 feature-complete and merged to `main`.** All 13 phases (0–12) are
+done: 21 importable packages plus examples, every one `gofmt`/`go vet` clean and
+green under `go test -race`, and the module is **stdlib-only** (no third-party
+dependency in the graph; optional OTel / NATS / SQL / HSM integrations are
+drop-in adapters). The whole project line has been fast-forwarded onto `main`
+(retiring the long-running `phase-1-iso8583-core` branch), and the post-tag
+additions (site packagers, `SealedVault`, commercial-agreement draft) were folded
+into a single clean **`v0.1.0`** rather than cutting a phantom version. The
+`v0.1.0` tag is local and unpushed — publishing the release (push `main` + the
+tag, then the GitHub release) is the maintainer's to run.
 
 ---
 
