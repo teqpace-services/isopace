@@ -3,7 +3,7 @@
 > **Living document.** Status colours are updated as work lands. The detailed
 > design each phase implements lives in [`ARCHITECTURE.md`](ARCHITECTURE.md).
 >
-> **Last updated:** 2026-06-01 (Phases 0–10 landed: core … runtime, flow, space, vault — reviewed)
+> **Last updated:** 2026-06-01 (Phases 0–11 landed: core … vault, rbac/store/ops — reviewed)
 
 ---
 
@@ -38,7 +38,7 @@ tests (and fuzz/bench where noted) pass, SPDX header present, public API matches
 | 8 | Processing / TX manager (`flow/`) | 🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩 | 100 |
 | 9 | Coordination (`space/`) | 🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩 | 100 |
 | 10 | Security / HSM (`vault/`) | 🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩 | 100 |
-| 11 | Enterprise / Ops | ⬜⬜⬜⬜⬜⬜⬜⬜⬜⬜ | 0 |
+| 11 | Enterprise / Ops (`rbac/`, `store/`, `ops/`) | 🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩 | 100 |
 | 12 | Release engineering (v0.1.0) | ⬜⬜⬜⬜⬜⬜⬜⬜⬜⬜ | 0 |
 
 **Legend for bars:** 🟩 done · 🟨 in progress · ⬜ remaining (each phase = 10 cells).
@@ -321,15 +321,34 @@ The dependency-free heart. Built in slices so each compiles and tests green.
 
 ---
 
-## Phase 11 — Enterprise / Ops
+## Phase 11 — Enterprise / Ops (`rbac/`, `store/`, `ops/`)
 
-| Status | Task |
-|:------:|------|
-| ⚪ | User / Role / RBAC |
-| ⚪ | Persistence / DB layer |
-| ⚪ | System monitor / health endpoints |
-| ⚪ | Admin / management API (REST) |
-| ⚪ | Metrics + clustering |
+| Status | Task | File |
+|:------:|------|------|
+| 🟢 | User / Role / RBAC (wildcard permissions, PBKDF2 credentials) | `rbac/rbac.go`, `rbac/credentials.go` |
+| 🟢 | Persistence / DB layer (collection/key/value `Store` + in-memory) | `store/store.go` |
+| 🟢 | System monitor / health endpoints (liveness/readiness) | `ops/health.go`, `ops/api.go` |
+| 🟢 | Admin / management API (REST, rbac-guarded) | `ops/api.go` |
+| 🟢 | Metrics (+ runtime.Observer bridge, Prometheus text) + clustering | `ops/metrics.go`, `ops/cluster.go` |
+
+> **Done:** stdlib-only (`net/http`, `encoding/json`, `crypto/pbkdf2`). `rbac`
+> maps users→roles→permissions with colon-namespaced wildcards (`tx:*`, `*`) and
+> stores PBKDF2-HMAC-SHA256 credentials (tunable work factor, constant-time
+> verify, **constant-time `Authenticate` so timing cannot enumerate users**).
+> `store` is a collection/key/value persistence interface with an in-memory
+> backend (copy-on-put/get) and typed JSON helpers. `ops` provides
+> liveness/readiness health checks, a metrics registry (counters/gauges/
+> summaries by label set that **implements `runtime.Observer`** and renders
+> Prometheus text — one kind per name, enforced), a cluster-membership interface
+> with a static single-node default, and an HTTP admin API (Go 1.22 method
+> routing): `/healthz`, `/readyz`, `/metrics` open; `/info` rbac-guarded. `go
+> test -race` green; reviewed (3 issues fixed); zero third-party deps.
+>
+> **Dependency notes:** a **SQL-backed `Store` over `database/sql`** is a
+> drop-in adapter (the driver is the deployment's blank-import choice, so the
+> core takes on no driver dependency); a **distributed `Cluster`** (gossip/raft,
+> or built on the space NATS adapter) is a drop-in. A public admin API should
+> additionally sit behind network controls (mTLS / allow-list).
 
 ---
 
