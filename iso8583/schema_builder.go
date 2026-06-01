@@ -186,6 +186,11 @@ func (b *SchemaBuilder) MustBuild() *Schema {
 	return s
 }
 
+// maxFieldUnits bounds FieldDef.MaxLen so a misconfigured schema cannot overflow
+// downstream length arithmetic (e.g. packed-BCD PackedLen's n+1). It is far
+// above any real ISO-8583 field (the largest standard DE is ~999 units).
+const maxFieldUnits = 1 << 20
+
 func validateDef(de int, d *FieldDef) []error {
 	var errs []error
 	if d.Sub == nil && d.Codec == nil {
@@ -193,6 +198,9 @@ func validateDef(de int, d *FieldDef) []error {
 	}
 	if d.Length == nil && d.Sub == nil && d.MaxLen <= 0 {
 		errs = append(errs, fmt.Errorf("DE %d is fixed-length but MaxLen <= 0", de))
+	}
+	if d.MaxLen > maxFieldUnits {
+		errs = append(errs, fmt.Errorf("DE %d MaxLen %d exceeds limit %d", de, d.MaxLen, maxFieldUnits))
 	}
 	if d.Kind == KindComposite && d.Sub == nil {
 		errs = append(errs, fmt.Errorf("DE %d is composite but has no sub-schema", de))
@@ -203,6 +211,9 @@ func validateDef(de int, d *FieldDef) []error {
 func validateTagDef(key string, d *FieldDef) []error {
 	if d.Codec == nil && d.Sub == nil {
 		return []error{fmt.Errorf("tag %s has no value codec", key)}
+	}
+	if d.MaxLen > maxFieldUnits {
+		return []error{fmt.Errorf("tag %s MaxLen %d exceeds limit %d", key, d.MaxLen, maxFieldUnits)}
 	}
 	return nil
 }

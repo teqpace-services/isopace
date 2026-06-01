@@ -447,8 +447,11 @@ func (m *Message) Seal() *Message {
 	return m
 }
 
-// Clone returns a mutable copy that shares src with the original. No field bytes
-// are copied until a field is Set (copy-on-write).
+// Clone returns a mutable copy that shares src with the original. Scalar fields
+// keep aliasing src (copy-on-write: no field bytes are copied until Set), but
+// composite children are deep-copied so mutating a clone's DE 55 (or any
+// sub-message) never leaks back into the original. Tag-addressed state is copied
+// too, so cloning a TLV sub-message preserves its children.
 func (m *Message) Clone() *Message {
 	c := &Message{
 		schema: m.schema,
@@ -458,6 +461,20 @@ func (m *Message) Clone() *Message {
 		slots:  make([]slot, len(m.slots)),
 	}
 	copy(c.slots, m.slots)
+	// Deep-copy composite children for copy-on-write safety: a shared child
+	// would let a clone's nested write corrupt the original.
+	for i := range c.slots {
+		if sub := c.slots[i].v.sub; sub != nil {
+			c.slots[i].v.sub = sub.Clone()
+		}
+	}
+	if m.tags != nil {
+		c.tags = make(map[string]tagSlot, len(m.tags))
+		for k, v := range m.tags {
+			c.tags[k] = v
+		}
+		c.tagOrder = append([]string(nil), m.tagOrder...)
+	}
 	return c
 }
 
