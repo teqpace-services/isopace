@@ -759,6 +759,7 @@ Isopace splits each jPOS `IF*` class into its two orthogonal parts: a **value `F
 | `IFEB_CHAR` / CP1047 usage | `EBCDIC1047` | `char.ebcdic.cp1047` | String | CP1047 table |
 | (UTF-8 text, jPOS lacks) | `UTF8` | `char.utf8` | String | extra |
 | `IFB_BINARY`, `IF_ECHO`/raw | `BINARY` | `b.raw` | Bytes | zero-copy sub-slice |
+| `IFA_BINARY` (hex-text binary) | `HexBINARY` | `b.hex` | Bytes | octets as ASCII hex (2 chars/octet) |
 | `IFA_NUMERIC` (ASCII digits) | `NumASCII` | `num.ascii` | Numeric | digit string |
 | `IFE_NUMERIC` (EBCDIC digits) | `NumEBCDIC` | `num.ebcdic` | Numeric | EBCDIC digits |
 | `IFB_NUMERIC` (BCD / packed) | `BCD` | `num.bcd` | Numeric | 2 digits/byte, left-aligned |
@@ -784,6 +785,8 @@ Isopace splits each jPOS `IF*` class into its two orthogonal parts: a **value `F
 | `LLNUM`/`LLCHAR` ASCII 2-digit | `LLVarASCII` | `len.ll.ascii` | LLVAR |
 | `LLLNUM`/`LLLCHAR` ASCII 3-digit | `LLLVarASCII` | `len.lll.ascii` | LLLVAR |
 | 4-digit ASCII (LLLLVAR) | `LLLLVarASCII` | `len.llll.ascii` | LLLLVAR |
+| 5-digit ASCII (LLLLLVAR) | `LLLLLVarASCII` | `len.lllll.ascii` | LLLLLVAR |
+| 6-digit ASCII (LLLLLLVAR) | `LLLLLLVarASCII` | `len.llllll.ascii` | LLLLLLVAR (e.g. DE 127 container) |
 | `IFB_LLNUM` BCD 2-digit prefix | `LLVarBCD` | `len.ll.bcd` | packed length |
 | `IFB_LLLNUM` BCD 3-digit prefix | `LLLVarBCD` | `len.lll.bcd` | packed length |
 | binary 1-byte length | `LLVarBinary` | `len.ll.bin` | binary count |
@@ -797,7 +800,7 @@ Isopace splits each jPOS `IF*` class into its two orthogonal parts: a **value `F
 
 | Capability | Isopace component | Registry name | Notes |
 |---|---|---|---|
-| Subfield group (DE 48/60/63, fixed/var positions) | `tlv` / `composite` codec + `Sub *Schema` | `composite.subfield` | nested `*Message` |
+| Subfield group (bitmap + positional subfields, e.g. DE 127) | `subfield.Packager` + headerless `Sub *Schema` | `subfield.iso` | nested sub-bitmap; `127.2` addressing |
 | EMV BER-TLV (DE 55) | `bertlv.Codec` | `tlv.ber` | hex-tag addressing (`55.9F26`); recursive |
 | Visa Base I dialect | `packager/visa` (schema overlay) | — | `Derive`/`Override` on iso93 |
 | Mastercard dialect | `packager/mastercard` (overlay) | — | DE 48/124 overrides |
@@ -896,6 +899,21 @@ fields:
 ```go
 schema, err := generic.LoadFile("schemadef/iso87b.yaml", fieldcodec.DefaultRegistry())
 ```
+
+### 7.5 Concrete site packagers (`zone`, `fields`, `switch`)
+
+Unlike the representation-independent `iso87`/`iso93` directories (which swap whole
+codec sets via a `rep`), a deployment often pins each field to one concrete codec
+and length discipline. Three such site packagers ship in the catalog: `zone` (a
+full ISO 8583:1987 directory, binary bitmap) and `fields`/`switch` (a sparse
+switch dialect, ASCII-hex bitmap). Each is just a table of
+`(DE, name, value, length, max)` rows over the two orthogonal axes, emitted both
+ways from one description: as a programmatic `*Schema` (`packager.Zone()`,
+`Fields()`, `Switch()`) and as editable JSON in `schemadef/{zone,fields,switch}.json`,
+generated from the same table so the two cannot drift. Their **DE 127** is a
+nested subfield group — a headerless sub-bitmap plus positional subfields wired
+with the `subfield.iso` composite codec — so `127.2`, `127.22`, … are addressable
+under the uniform path grammar, just like `55.9F26`.
 
 ---
 

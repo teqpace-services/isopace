@@ -1,0 +1,590 @@
+{
+  "id": "switch",
+  "mti": "char.ascii",
+  "bitmap": {
+    "codec": "bitmap.hex",
+    "levels": 2
+  },
+  "composites": {
+    "switch-127": {
+      "type": "subfields",
+      "bitmap": {
+        "codec": "bitmap.hex",
+        "levels": 2
+      },
+      "fields": {
+        "10": {
+          "name": "CVV2",
+          "codec": "num.ascii",
+          "length": "len.fixed",
+          "max": 3
+        },
+        "11": {
+          "name": "ORIGINAL KEY",
+          "codec": "char.ascii",
+          "length": "len.fixed",
+          "max": 32
+        },
+        "12": {
+          "name": "TERMINAL OWNER",
+          "codec": "char.ascii",
+          "length": "len.ll.ascii",
+          "max": 25
+        },
+        "13": {
+          "name": "POS GEOGRAPHIC DATA",
+          "codec": "char.ascii",
+          "length": "len.fixed",
+          "max": 17
+        },
+        "14": {
+          "name": "SPONSOR BANK",
+          "codec": "char.ascii",
+          "length": "len.fixed",
+          "max": 8
+        },
+        "15": {
+          "name": "AVS REQUEST",
+          "codec": "char.ascii",
+          "length": "len.ll.ascii",
+          "max": 29
+        },
+        "16": {
+          "name": "AVS RESPONSE",
+          "codec": "char.ascii",
+          "length": "len.fixed",
+          "max": 1
+        },
+        "17": {
+          "name": "CARDHOLDER INFORMATION",
+          "codec": "char.ascii",
+          "length": "len.ll.ascii",
+          "max": 50
+        },
+        "18": {
+          "name": "VALIDATION DATA",
+          "codec": "char.ascii",
+          "length": "len.ll.ascii",
+          "max": 50
+        },
+        "19": {
+          "name": "BANK DETAILS",
+          "codec": "char.ascii",
+          "length": "len.fixed",
+          "max": 31
+        },
+        "2": {
+          "name": "SWITCH KEY",
+          "codec": "char.ascii",
+          "length": "len.fixed",
+          "max": 32
+        },
+        "20": {
+          "name": "AUTHORIZER DATE SETTLEMENT",
+          "codec": "num.ascii",
+          "length": "len.fixed",
+          "max": 8
+        },
+        "21": {
+          "name": "RECORD IDENTIFICATION",
+          "codec": "char.ascii",
+          "length": "len.ll.ascii",
+          "max": 12
+        },
+        "22": {
+          "name": "STRUCTURED DATA",
+          "codec": "char.ascii",
+          "length": "len.lllll.ascii",
+          "max": 99999
+        },
+        "23": {
+          "name": "PAYEE NAME AND ADDRESS",
+          "codec": "char.ascii",
+          "length": "len.fixed",
+          "max": 253
+        },
+        "24": {
+          "name": "PAYER ACCOUNT INFORMATION",
+          "codec": "char.ascii",
+          "length": "len.ll.ascii",
+          "max": 28
+        },
+        "25": {
+          "name": "ICC DATA",
+          "codec": "char.ascii",
+          "length": "len.llll.ascii",
+          "max": 9999
+        },
+        "26": {
+          "name": "ORIGINAL NODE",
+          "codec": "char.ascii",
+          "length": "len.ll.ascii",
+          "max": 20
+        },
+        "27": {
+          "name": "CARD VERIFICATION RESULT",
+          "codec": "char.ascii",
+          "length": "len.fixed",
+          "max": 1
+        },
+        "28": {
+          "name": "AMERICAN EXPRESS CARD IDENTIFIER",
+          "codec": "num.ascii",
+          "length": "len.fixed",
+          "max": 4
+        },
+        "29": {
+          "name": "3-D SECURE DATA",
+          "codec": "b.hex",
+          "length": "len.fixed",
+          "max": 40
+        },
+        "3": {
+          "name": "ROUTING INFORMATION",
+          "codec": "char.ascii",
+          "length": "len.fixed",
+          "max": 48
+        },
+        "30": {
+          "name": "3-D SECURE RESULT",
+          "codec": "char.ascii",
+          "length": "len.fixed",
+          "max": 1
+        },
+        "31": {
+          "name": "ISSUER NETWORK ID",
+          "codec": "char.ascii",
+          "length": "len.ll.ascii",
+          "max": 11
+        },
+        "32": {
+          "name": "UCAF DATA",
+          "codec": "char.ascii",
+          "length": "len.ll.ascii",
+          "max": 33
+        },
+        "33": {
+          "name": "EXTENDED TRANSACTION TYPE",
+          "codec": "num.ascii",
+          "length": "len.fixed",
+          "max": 4
+        },
+        "34": {
+          "name": "ACCOUNT TYPE QUALIFIERS",
+          "codec": "num.ascii",
+          "length": "len.fixed",
+          "max": 2
+        },
+        "35": {
+          "name": "ACQUIRER NETWORK ID",
+          "codec": "char.ascii",
+          "length": "len.ll.ascii",
+          "max": 11
+        },
+        "36": {
+          "name": "CUSTOMER ID",
+          "codec": "char.ascii",
+          "length": "len.ll.ascii",
+          "max": 25
+        },
+        "37": {
+          "name": "EXTENDED RESPONSE CODE",
+          "codec": "char.ascii",
+          "length": "len.fixed",
+          "max": 4
+        },
+        "38": {
+          "name": "ADDITIONAL POS DATA CODE",
+          "codec": "char.ascii",
+          "length": "len.ll.ascii",
+          "max": 99
+        },
+        "39": {
+          "name": "ORIGINAL RESPONSE CODE",
+          "codec": "char.ascii",
+          "length": "len.fixed",
+          "max": 2
+        },
+        "4": {
+          "name": "POS DATA",
+          "codec": "char.ascii",
+          "length": "len.fixed",
+          "max": 22
+        },
+        "40": {
+          "name": "ACCOUNT TYPE QUALIFIERS",
+          "codec": "char.ascii",
+          "length": "len.lll.ascii",
+          "max": 512
+        },
+        "41": {
+          "name": "ORIGINATING REMOTE ADDRESS",
+          "codec": "char.ascii",
+          "length": "len.ll.ascii",
+          "max": 99
+        },
+        "42": {
+          "name": "TRANSACTION NUMBER",
+          "codec": "char.ascii",
+          "length": "len.ll.ascii",
+          "max": 10
+        },
+        "5": {
+          "name": "SERVICE STATION DATA",
+          "codec": "char.ascii",
+          "length": "len.fixed",
+          "max": 73
+        },
+        "6": {
+          "name": "AUTHORIZATION PROFILE",
+          "codec": "num.ascii",
+          "length": "len.fixed",
+          "max": 2
+        },
+        "7": {
+          "name": "CHECK DATA",
+          "codec": "char.ascii",
+          "length": "len.ll.ascii",
+          "max": 50
+        },
+        "8": {
+          "name": "RETENTION DATA",
+          "codec": "char.ascii",
+          "length": "len.lll.ascii",
+          "max": 999
+        },
+        "9": {
+          "name": "ADDITIONAL NODE DATA",
+          "codec": "char.ascii",
+          "length": "len.lll.ascii",
+          "max": 255
+        }
+      }
+    }
+  },
+  "fields": {
+    "100": {
+      "name": "RECEIVING INSTITUTION IDENT CODE",
+      "codec": "num.ascii",
+      "length": "len.ll.ascii",
+      "max": 11
+    },
+    "101": {
+      "name": "FILE NAME",
+      "codec": "char.ascii",
+      "length": "len.ll.ascii",
+      "max": 17
+    },
+    "102": {
+      "name": "ACCOUNT IDENTIFICATION 1",
+      "codec": "char.ascii",
+      "length": "len.ll.ascii",
+      "max": 28
+    },
+    "103": {
+      "name": "ACCOUNT IDENTIFICATION 2",
+      "codec": "char.ascii",
+      "length": "len.ll.ascii",
+      "max": 28
+    },
+    "11": {
+      "name": "SYSTEM TRACE AUDIT NUMBER",
+      "codec": "num.ascii",
+      "length": "len.fixed",
+      "max": 6
+    },
+    "12": {
+      "name": "TIME, LOCAL TRANSACTION",
+      "codec": "char.ascii",
+      "length": "len.fixed",
+      "max": 6
+    },
+    "123": {
+      "name": "POS DATA CODE",
+      "codec": "char.ascii",
+      "length": "len.fixed",
+      "max": 15
+    },
+    "127": {
+      "name": "RESERVED PRIVATE USE",
+      "length": "len.llllll.ascii",
+      "composite": "switch-127"
+    },
+    "128": {
+      "name": "SECONDARY MESSAGE HASH VALUE",
+      "codec": "char.ascii",
+      "length": "len.fixed",
+      "max": 64
+    },
+    "13": {
+      "name": "DATE, LOCAL TRANSACTION",
+      "codec": "char.ascii",
+      "length": "len.fixed",
+      "max": 4
+    },
+    "14": {
+      "name": "DATE, EXPIRATION",
+      "codec": "char.ascii",
+      "length": "len.fixed",
+      "max": 4
+    },
+    "15": {
+      "name": "DATE, SETTLEMENT",
+      "codec": "char.ascii",
+      "length": "len.fixed",
+      "max": 4
+    },
+    "18": {
+      "name": "MERCHANT TYPE",
+      "codec": "char.ascii",
+      "length": "len.fixed",
+      "max": 4
+    },
+    "2": {
+      "name": "PRIMARY ACCOUNT NUMBER",
+      "codec": "num.ascii",
+      "length": "len.ll.ascii",
+      "max": 19
+    },
+    "22": {
+      "name": "POS ENTRY MODE",
+      "codec": "char.ascii",
+      "length": "len.fixed",
+      "max": 3
+    },
+    "23": {
+      "name": "CARD SEQUENCE NUMBER",
+      "codec": "char.ascii",
+      "length": "len.fixed",
+      "max": 3
+    },
+    "25": {
+      "name": "POS CONDITION CODE",
+      "codec": "char.ascii",
+      "length": "len.fixed",
+      "max": 2
+    },
+    "26": {
+      "name": "POS PIN CAPTURE CODE",
+      "codec": "char.ascii",
+      "length": "len.fixed",
+      "max": 2
+    },
+    "28": {
+      "name": "AMOUNT, TRANSACTION FEE",
+      "codec": "char.ascii",
+      "length": "len.fixed",
+      "max": 9
+    },
+    "29": {
+      "name": "AMOUNT, SETTLEMENT FEE",
+      "codec": "char.ascii",
+      "length": "len.fixed",
+      "max": 9
+    },
+    "3": {
+      "name": "PROCESSING CODE",
+      "codec": "char.ascii",
+      "length": "len.fixed",
+      "max": 6
+    },
+    "30": {
+      "name": "AMOUNT, TRANSACTION PROCESSING FEE",
+      "codec": "char.ascii",
+      "length": "len.fixed",
+      "max": 9
+    },
+    "31": {
+      "name": "AMOUNT, SETTLEMENT PROCESSING FEE",
+      "codec": "char.ascii",
+      "length": "len.fixed",
+      "max": 9
+    },
+    "32": {
+      "name": "ACQUIRING INSTITUTION IDENTIFICATION CODE",
+      "codec": "char.ascii",
+      "length": "len.ll.ascii",
+      "max": 11
+    },
+    "33": {
+      "name": "FORWARDING INSTITUTION IDENTIFICATION CODE",
+      "codec": "num.ascii",
+      "length": "len.ll.ascii",
+      "max": 11
+    },
+    "35": {
+      "name": "TRACK 2 DATA",
+      "codec": "char.ascii",
+      "length": "len.ll.ascii",
+      "max": 37
+    },
+    "37": {
+      "name": "RETRIEVAL REFERENCE NUMBER",
+      "codec": "char.ascii",
+      "length": "len.fixed",
+      "max": 12
+    },
+    "38": {
+      "name": "AUTHORIZATION CODE",
+      "codec": "char.ascii",
+      "length": "len.fixed",
+      "max": 6
+    },
+    "39": {
+      "name": "RESPONSE CODE",
+      "codec": "char.ascii",
+      "length": "len.fixed",
+      "max": 2
+    },
+    "4": {
+      "name": "AMOUNT, TRANSACTION",
+      "codec": "num.ascii",
+      "length": "len.fixed",
+      "max": 12
+    },
+    "40": {
+      "name": "SERVICE RESTRICTION CODE",
+      "codec": "char.ascii",
+      "length": "len.fixed",
+      "max": 3
+    },
+    "41": {
+      "name": "CARD ACCEPTOR TERMINAL IDENTIFICATION",
+      "codec": "char.ascii",
+      "length": "len.fixed",
+      "max": 8
+    },
+    "42": {
+      "name": "CARD ACCEPTOR IDENTIFICATION CODE",
+      "codec": "char.ascii",
+      "length": "len.fixed",
+      "max": 15
+    },
+    "43": {
+      "name": "CARD ACCEPTOR NAME/LOCATION",
+      "codec": "char.ascii",
+      "length": "len.fixed",
+      "max": 40
+    },
+    "48": {
+      "name": "ADDITIONAL DATA",
+      "codec": "char.ascii",
+      "length": "len.lll.ascii",
+      "max": 999
+    },
+    "49": {
+      "name": "CURRENCY CODE",
+      "codec": "char.ascii",
+      "length": "len.fixed",
+      "max": 3
+    },
+    "5": {
+      "name": "AMOUNT, SETTLEMENT",
+      "codec": "num.ascii",
+      "length": "len.fixed",
+      "max": 12
+    },
+    "52": {
+      "name": "PIN DATA",
+      "codec": "b.hex",
+      "length": "len.fixed",
+      "max": 8
+    },
+    "53": {
+      "name": "SECURITY RELATED CONTROL INFORMATION",
+      "codec": "char.ascii",
+      "length": "len.fixed",
+      "max": 96
+    },
+    "54": {
+      "name": "ADDITIONAL AMOUNT",
+      "codec": "char.ascii",
+      "length": "len.lll.ascii",
+      "max": 120
+    },
+    "55": {
+      "name": "INTEGRATED CIRCUIT CARD SYSTEM RELATED DATA",
+      "codec": "char.ascii",
+      "length": "len.lll.ascii",
+      "max": 510
+    },
+    "56": {
+      "name": "MESSAGE REASON CODE",
+      "codec": "char.ascii",
+      "length": "len.fixed",
+      "max": 4
+    },
+    "59": {
+      "name": "ECHO DATA",
+      "codec": "char.ascii",
+      "length": "len.lll.ascii",
+      "max": 255
+    },
+    "60": {
+      "name": "PAYMENT INFORMATION",
+      "codec": "char.ascii",
+      "length": "len.lll.ascii",
+      "max": 999
+    },
+    "61": {
+      "name": "PRIVATE FIELD, MANAGEMENT DATA 1",
+      "codec": "char.ascii",
+      "length": "len.lll.ascii",
+      "max": 999
+    },
+    "62": {
+      "name": "PRIVATE FIELD, MANAGEMENT DATA 1",
+      "codec": "char.ascii",
+      "length": "len.lll.ascii",
+      "max": 999
+    },
+    "63": {
+      "name": "PRIVATE FIELD, MANAGEMENT DATA 2",
+      "codec": "char.ascii",
+      "length": "len.llll.ascii",
+      "max": 9999
+    },
+    "64": {
+      "name": "PRIMARY MESSAGE HASH VALUE",
+      "codec": "char.ascii",
+      "length": "len.fixed",
+      "max": 64
+    },
+    "7": {
+      "name": "TRANSMISSION DATE AND TIME",
+      "codec": "char.ascii",
+      "length": "len.fixed",
+      "max": 10
+    },
+    "70": {
+      "name": "Network Management Information Code",
+      "codec": "char.ascii",
+      "length": "len.fixed",
+      "max": 3
+    },
+    "9": {
+      "name": "CONVERSION RATE, SETTLEMENT",
+      "codec": "char.ascii",
+      "length": "len.fixed",
+      "max": 8
+    },
+    "90": {
+      "name": "ORIGINAL DATA ELEMENTS",
+      "codec": "num.ascii",
+      "length": "len.fixed",
+      "max": 42
+    },
+    "95": {
+      "name": "REPLACEMENT AMOUNTS",
+      "codec": "num.ascii",
+      "length": "len.fixed",
+      "max": 42
+    },
+    "98": {
+      "name": "PAYEE",
+      "codec": "char.ascii",
+      "length": "len.fixed",
+      "max": 25
+    }
+  }
+}

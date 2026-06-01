@@ -9,6 +9,18 @@ All notable changes to Isopace are recorded here. The format is based on
 
 ### Added
 
+- **Concrete site packagers — `zone`, `fields`, `switch`.** Three deployment
+  layouts that pin each field to one value codec and one length discipline,
+  added to the catalog as both programmatic profiles (`packager.Zone()`,
+  `Fields()`, `Switch()`, registered in `Profiles()`) and editable JSON
+  (`packager/schemadef/{zone,fields,switch}.json`), generated from one field
+  table so the two forms cannot drift. Their **DE 127** is a nested subfield
+  group — a headerless sub-bitmap plus positional subfields — so `127.2`,
+  `127.22`, … are addressable like `55.9F26`. New supporting catalog primitives:
+  the `subfield.iso` positional subfield composite codec (`fieldcodec/subfield`),
+  the `b.hex` ASCII-hex binary value codec, the `len.lllll.ascii` /
+  `len.llllll.ascii` 5-/6-digit length prefixes, and `SchemaBuilder.Headerless()`
+  for MTI-less subfield groups.
 - **`vault.SealedVault`** — a hardened software `Vault`: working keys are
   encrypted at rest under a caller-supplied key-encryption key (AES-GCM),
   decrypted only transiently and zeroized after each operation (including the

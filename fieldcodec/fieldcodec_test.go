@@ -56,6 +56,27 @@ func TestCharCodecs(t *testing.T) {
 	}
 }
 
+func TestHexBinaryCodec(t *testing.T) {
+	// b.hex: octets out as uppercase ASCII hex, NUL-padded to the fixed width.
+	out, err := fieldcodec.HexBINARY.EncodeBody(nil, iso8583.BytesValue([]byte{0xDE, 0xAD}), fixed(4))
+	if err != nil || string(out) != "DEAD0000" {
+		t.Errorf("HexBINARY encode = %q, %v want DEAD0000", out, err)
+	}
+	// Decode parses 2N hex chars back to N octets.
+	v, err := fieldcodec.HexBINARY.DecodeBody([]byte("DEAD0000"), 4, fixed(4))
+	if err != nil || !bytes.Equal(v.Bytes(), []byte{0xDE, 0xAD, 0x00, 0x00}) {
+		t.Errorf("HexBINARY decode = % X, %v", v.Bytes(), err)
+	}
+	// Wire span is two hex chars per logical octet.
+	if wc, ok := fieldcodec.HexBINARY.(iso8583.WidthCodec); !ok || wc.BodyBytes(8) != 16 {
+		t.Errorf("HexBINARY BodyBytes(8) != 16")
+	}
+	// Malformed hex is rejected.
+	if _, err := fieldcodec.HexBINARY.DecodeBody([]byte("ZZ"), 1, fixed(1)); err == nil {
+		t.Errorf("expected error on non-hex body")
+	}
+}
+
 func TestNumericCodecs(t *testing.T) {
 	// num.ascii fixed: zero left-padded.
 	out, _ := fieldcodec.NumASCII.EncodeBody(nil, iso8583.NumericValue([]byte("123")), fixed(6))

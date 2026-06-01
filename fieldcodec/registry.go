@@ -68,7 +68,7 @@ func (r *Registry) LookupBitmap(name string) (iso8583.BitmapCodec, bool) {
 func DefaultRegistry() *Registry {
 	r := NewRegistry()
 	for _, c := range []iso8583.FieldCodec{
-		ASCII, EBCDIC037, EBCDIC1047, UTF8, BINARY,
+		ASCII, EBCDIC037, EBCDIC1047, UTF8, BINARY, HexBINARY,
 		NumASCII, NumEBCDIC, BCD, RBCD, NumBinary,
 		AmountASCII, AmountBCD, AmountBinary,
 	} {

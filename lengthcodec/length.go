@@ -11,7 +11,7 @@
 // Authorship is recorded in the AUTHORS file.
 
 // Package lengthcodec implements the orthogonal length-prefix axis of the
-// Isopace wire engine: Fixed plus LL/LLL/LLLL variable prefixes in ASCII, BCD,
+// Isopace wire engine: Fixed plus LL..LLLLLL variable prefixes in ASCII, BCD,
 // binary and EBCDIC representations. A field's wire behaviour is the pair
 // (LengthCodec, fieldcodec.FieldCodec), so these compose freely with any value
 // codec instead of jPOS's combinatorial IF* class zoo.
@@ -187,9 +187,11 @@ func atoiDigits(b []byte) (int, error) {
 var (
 	Fixed iso8583.LengthCodec = fixed{}
 
-	LLVarASCII   iso8583.LengthCodec = varLen{name: "len.ll.ascii", digits: 2, repr: reprASCII}
-	LLLVarASCII  iso8583.LengthCodec = varLen{name: "len.lll.ascii", digits: 3, repr: reprASCII}
-	LLLLVarASCII iso8583.LengthCodec = varLen{name: "len.llll.ascii", digits: 4, repr: reprASCII}
+	LLVarASCII     iso8583.LengthCodec = varLen{name: "len.ll.ascii", digits: 2, repr: reprASCII}
+	LLLVarASCII    iso8583.LengthCodec = varLen{name: "len.lll.ascii", digits: 3, repr: reprASCII}
+	LLLLVarASCII   iso8583.LengthCodec = varLen{name: "len.llll.ascii", digits: 4, repr: reprASCII}
+	LLLLLVarASCII  iso8583.LengthCodec = varLen{name: "len.lllll.ascii", digits: 5, repr: reprASCII}
+	LLLLLLVarASCII iso8583.LengthCodec = varLen{name: "len.llllll.ascii", digits: 6, repr: reprASCII}
 
 	LLVarBCD  iso8583.LengthCodec = varLen{name: "len.ll.bcd", digits: 2, repr: reprBCD}
 	LLLVarBCD iso8583.LengthCodec = varLen{name: "len.lll.bcd", digits: 3, repr: reprBCD}
@@ -205,7 +207,7 @@ var (
 func All() []iso8583.LengthCodec {
 	return []iso8583.LengthCodec{
 		Fixed,
-		LLVarASCII, LLLVarASCII, LLLLVarASCII,
+		LLVarASCII, LLLVarASCII, LLLLVarASCII, LLLLLVarASCII, LLLLLLVarASCII,
 		LLVarBCD, LLLVarBCD,
 		LLVarBinary, LLLVarBinary,
 		LLVarEBCDIC, LLLVarEBCDIC,
