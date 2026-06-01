@@ -106,7 +106,31 @@ func DecodePINBlock(format PINBlockFormat, block []byte, pan string) (string, er
 		}
 		pin[i] = '0' + d
 	}
+	if err := checkPadding(format, nibbles[2+l:]); err != nil {
+		return "", err
+	}
 	return string(pin), nil
+}
+
+// checkPadding validates the trailing pad nibbles against the format's scheme,
+// so a tampered or malformed block is rejected rather than silently accepted
+// (ISO 9564-1 block integrity). Format 1 padding is unrestricted.
+func checkPadding(format PINBlockFormat, pad []byte) error {
+	switch format {
+	case ISO0:
+		for _, n := range pad {
+			if n != 0xF {
+				return fmt.Errorf("vault: ISO-0 PIN block has non-F pad nibble %X", n)
+			}
+		}
+	case ISO3:
+		for _, n := range pad {
+			if n < 0xA {
+				return fmt.Errorf("vault: ISO-3 PIN block pad nibble %X below A", n)
+			}
+		}
+	}
+	return nil
 }
 
 // pinField assembles the 8-byte PIN field for the format.
