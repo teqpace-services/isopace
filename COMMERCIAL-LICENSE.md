@@ -34,6 +34,7 @@ To discuss commercial licensing, support, or consulting:
 - Email: `licensing@teqpace.com` *(confirm this mailbox is provisioned)*
 
 > The specific commercial terms, pricing, support levels, and any warranty or
-> indemnity provisions are defined in the commercial agreement itself and are to
-> be drafted/reviewed by Teqpace and its legal counsel. This document is an
-> overview, not an offer or a contract.
+> indemnity provisions are defined in the commercial agreement itself. A working
+> **draft template** is in [`COMMERCIAL-AGREEMENT.md`](COMMERCIAL-AGREEMENT.md) —
+> it is a starting point only and **must be reviewed and completed by legal
+> counsel** before use. This document is an overview, not an offer or a contract.
