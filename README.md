@@ -2,43 +2,64 @@
 
 **Isopace** is a financial transaction framework for Go — ISO-8583 messaging and
 payment switching, plus the runtime, transaction pipeline, coordination, and
-security building blocks needed to run a production switch.
+security building blocks needed to run a switch.
 
 It is an independent, clean-room implementation in the spirit of
 [jPOS](https://jpos.org), redesigned around idiomatic Go: type-safe field access,
 zero-copy decoding, a pluggable codec catalog, and goroutine-native concurrency.
+The module is **stdlib-only** — no third-party dependency in the module graph.
 
-> **Status: pre-alpha / under active development.** APIs are unstable and will
-> change. Not yet ready for production use.
+> **Status: `v0.1.0` — first tagged release.** Feature-complete across the
+> planned layers and tested under `-race`, but pre-1.0: the API may change
+> between minor versions (see [`docs/versioning.md`](docs/versioning.md)). The
+> software `Vault` backend is for development/testing — production PIN and key
+> handling require a certified HSM.
 
-A product of **[Teqpace Services Ltd.](https://teqpace.com)**.
+A product of **[Teqpace Services Ltd.](https://teqpace.com)**
 
 ---
 
-## What Isopace aims to provide
+## Packages
 
-| Layer | Component | Purpose |
-|-------|-----------|---------|
-| Messaging | `iso8583` — `Message`, `Field`, `Schema`, `Codec`, `FieldCodec` | Type-safe, zero-copy ISO-8583 marshal/unmarshal |
-| Codecs | pluggable `FieldCodec` registry | ASCII / EBCDIC / BCD / binary, all jPOS `IF*` variants, BER-TLV, and more |
-| Transport | `Link`, `Listener`, `Switch` | Connections, servers, and request↔response switching |
-| Runtime | `Runtime` | Component host with lifecycle, configuration, and hot (re)deploy |
-| Processing | `Flow` / `Stage`, `Exchange` | The transaction pipeline and its shared state |
-| Coordination | `Space` | In-process and distributed tuple-space / store-and-forward |
-| Security | `Vault` | PIN/MAC, key management, and HSM access |
+| Layer | Package | Purpose |
+|-------|---------|---------|
+| Messaging | `iso8583` | Immutable, zero-copy `Message`; `Codec`; `Schema`; typed `Get[T]` and struct binding; exhaustive validation |
+| Codecs | `fieldcodec`, `lengthcodec` | Orthogonal value × length codecs (ASCII/EBCDIC/BCD/binary, BER-TLV) resolvable by name |
+| Profiles | `packager` | ISO 8583:1987 A/B/C, 1993 A/B, Visa & Mastercard overlays, declarative JSON loader |
+| Rendering | `render/jsonio`, `render/protobuf`, `render/iso20022` | One message, many formats — from a read-only `View` |
+| Transport | `link`, `listener`, `mux` | Framed TCP (+TLS), graceful server, connection pool, request/response switch |
+| Runtime | `runtime` | Component host & lifecycle, deploy descriptors + hot redeploy, config, `slog`, observability facade |
+| Processing | `flow` | Two-phase `Flow`/`Stage`/`Exchange` pipeline: routing, journaling, retry, idempotency, profiling |
+| Coordination | `space` | Keyed tuple space + durable, crash-safe store-and-forward |
+| Security | `vault` | PIN blocks, MAC/CMAC, DUKPT, TR-31 key blocks, EMV ARQC/ARPC behind a `Vault` façade |
+| Enterprise/Ops | `rbac`, `store`, `ops` | RBAC + PBKDF2 auth, persistence, health/metrics/admin API, cluster membership |
 
-The full design is documented in [`ARCHITECTURE.md`](ARCHITECTURE.md) *(in progress)*.
+The design and layering rules are in [`ARCHITECTURE.md`](ARCHITECTURE.md); status
+per phase is tracked in [`IMPLEMENTATION_PLAN.md`](IMPLEMENTATION_PLAN.md).
+
+## Quickstart
+
+```sh
+go test ./...
+
+# An issuer that answers authorizations, and an acquirer that sends them:
+go run ./examples/issuer   -addr 127.0.0.1:8583 -limit 10000   # terminal 1
+go run ./examples/acquirer -addr 127.0.0.1:8583 -n 5 -amount 2500  # terminal 2
+```
+
+See [`docs/getting-started.md`](docs/getting-started.md) for the core API and the
+`simulator` test host (which exposes `/healthz`, `/readyz`, and `/metrics`).
 
 ## Why not just use jPOS?
 
 jPOS is excellent and battle-tested, but it is Java/AGPL and carries 25 years of
-design history. Isopace is a **from-scratch Go implementation** that aims to keep
-what makes jPOS great while improving on its data model (compile-time type safety,
-zero-copy parsing, first-class validation, multi-format rendering) and operating
-naturally in cloud-native, high-throughput Go services.
-
-Isopace is **not** a translation or port of jPOS. It is built clean-room from the
-ISO-8583 standard and public payments knowledge — no jPOS source is consulted.
+design history. Isopace is a **from-scratch Go implementation** that keeps what
+makes jPOS great while improving on its data model — compile-time type safety,
+zero-copy parsing, an always-derived bitmap, first-class validation, and
+multi-format rendering — and operating naturally in cloud-native, high-throughput
+Go services. It is **not** a translation or port of jPOS: it is built clean-room
+from the ISO-8583 standard and public payments knowledge, with no jPOS source
+consulted (see [`CONTRIBUTING.md`](CONTRIBUTING.md)).
 
 ## Licensing
 
@@ -51,11 +72,14 @@ Isopace is **dual-licensed**:
   AGPL copyleft obligations for closed-source or hosted/commercial deployments.
   See [COMMERCIAL-LICENSE.md](COMMERCIAL-LICENSE.md).
 
+Keeping the module stdlib-only is deliberate: it keeps this dual-license model
+free of transitive copyleft.
+
 ## Contributing
 
 Contributions are welcome. External contributors must sign the
-[Contributor License Agreement](CLA.md) so that Teqpace can maintain the
-dual-license model. See [CONTRIBUTING.md](CONTRIBUTING.md).
+[Contributor License Agreement](CLA.md) so Teqpace can maintain the dual-license
+model. See [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Security
 
