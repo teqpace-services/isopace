@@ -61,11 +61,11 @@ func (c *Codec) Unmarshal(wire []byte) (*Message, error) {
 	off := 0
 
 	if s.mti != nil {
-		bodyOff, bodyEnd, next, err := fieldBodySpan(s.mti, wire, off)
+		bodyOff, bodyEnd, next, units, err := fieldBodySpan(s.mti, wire, off)
 		if err != nil {
 			return nil, &FieldError{Path: DE(0), Offset: off, Name: s.mti.Name, Err: err}
 		}
-		m.slots[0] = slot{present: true, fromSrc: true, wireOff: off, bodyOff: bodyOff, bodyEnd: bodyEnd}
+		m.slots[0] = slot{present: true, fromSrc: true, wireOff: off, bodyOff: bodyOff, bodyEnd: bodyEnd, units: units}
 		off = next
 	}
 
@@ -88,13 +88,13 @@ func (c *Codec) Unmarshal(wire []byte) (*Message, error) {
 			ferr = &FieldError{Path: DE(de), Offset: off, Err: errUnknownDE}
 			return false
 		}
-		bodyOff, bodyEnd, nx, err := fieldBodySpan(def, wire, off)
+		bodyOff, bodyEnd, nx, units, err := fieldBodySpan(def, wire, off)
 		if err != nil {
 			ferr = &FieldError{Path: DE(de), Offset: off, Name: def.Name, Err: err}
 			return false
 		}
 		if de < len(m.slots) {
-			m.slots[de] = slot{present: true, fromSrc: true, wireOff: off, bodyOff: bodyOff, bodyEnd: bodyEnd}
+			m.slots[de] = slot{present: true, fromSrc: true, wireOff: off, bodyOff: bodyOff, bodyEnd: bodyEnd, units: units}
 		}
 		off = nx
 		return true
@@ -215,43 +215,57 @@ func (c *Codec) Validate(m *Message) error {
 }
 
 // fieldBodySpan reads the length prefix (if any) at off and returns the body
-// span and the offset just past the field. A nil LengthCodec means a fixed
-// field of MaxLen wire bytes.
-func fieldBodySpan(def *FieldDef, src []byte, off int) (bodyOff, bodyEnd, next int, err error) {
+// span, the offset just past the field, and the logical unit count. A nil
+// LengthCodec means a fixed field of MaxLen units. The unit count is converted
+// to a wire byte span through the value codec's optional WidthCodec.
+func fieldBodySpan(def *FieldDef, src []byte, off int) (bodyOff, bodyEnd, next, units int, err error) {
 	if off < 0 || off > len(src) {
-		return 0, 0, 0, errTruncated
+		return 0, 0, 0, 0, errTruncated
 	}
 	if def.Length == nil {
+		units = def.MaxLen
 		bodyOff = off
-		bodyEnd = off + def.MaxLen
-		if bodyEnd > len(src) {
-			return 0, 0, 0, errTruncated
+	} else {
+		var afterPrefix int
+		units, afterPrefix, err = def.Length.ReadLen(src, off, def)
+		if err != nil {
+			return 0, 0, 0, 0, err
 		}
-		return bodyOff, bodyEnd, bodyEnd, nil
+		if units < 0 || afterPrefix < off {
+			return 0, 0, 0, 0, errBadLength
+		}
+		bodyOff = afterPrefix
 	}
-	bodyLen, afterPrefix, err := def.Length.ReadLen(src, off, def)
-	if err != nil {
-		return 0, 0, 0, err
-	}
-	if bodyLen < 0 || afterPrefix < off {
-		return 0, 0, 0, errBadLength
-	}
-	bodyOff = afterPrefix
-	bodyEnd = afterPrefix + bodyLen
+	bodyEnd = bodyOff + wireBytes(def, units)
 	if bodyEnd > len(src) {
-		return 0, 0, 0, errTruncated
+		return 0, 0, 0, 0, errTruncated
 	}
-	return bodyOff, bodyEnd, bodyEnd, nil
+	return bodyOff, bodyEnd, bodyEnd, units, nil
+}
+
+// wireBytes converts a logical unit count to the body's wire byte width using
+// the value codec's optional WidthCodec (packed BCD: 2 units/byte); the default
+// is 1 unit == 1 byte (and composites count bytes directly).
+func wireBytes(def *FieldDef, units int) int {
+	if wc, ok := def.Codec.(WidthCodec); ok {
+		return wc.BodyBytes(units)
+	}
+	return units
 }
 
 // appendField appends one field (length prefix + body) to dst. A clean field is
-// copied straight from src; a dirty or freshly-built field is re-encoded via
-// its codec. scratch is reused across fields to avoid per-field allocation.
+// copied VERBATIM from src (prefix + body), preserving any packed/odd-length
+// encoding exactly; a dirty or freshly-built field is re-encoded via its codec.
+// scratch is reused across fields to avoid per-field allocation.
 func appendField(dst, scratch []byte, def *FieldDef, sl *slot, src []byte) (outDst, outScratch []byte, err error) {
-	var body []byte
 	if sl.fromSrc && !sl.dirty && src != nil {
-		body = src[sl.bodyOff:sl.bodyEnd]
-	} else if def.Codec != nil {
+		// Verbatim copy of the original prefix + body.
+		dst = append(dst, src[sl.wireOff:sl.bodyEnd]...)
+		return dst, scratch, nil
+	}
+
+	var body []byte
+	if def.Codec != nil {
 		scratch, err = def.Codec.EncodeBody(scratch[:0], sl.v, def)
 		if err != nil {
 			return dst, scratch, &FieldError{Path: def.Path, Offset: -1, Name: def.Name, Err: err}
@@ -263,13 +277,35 @@ func appendField(dst, scratch []byte, def *FieldDef, sl *slot, src []byte) (outD
 	}
 
 	if def.Length != nil {
-		dst, err = def.Length.WriteLen(dst, len(body), def)
+		dst, err = def.Length.WriteLen(dst, encodeUnits(def, sl.v, body), def)
 		if err != nil {
 			return dst, scratch, &FieldError{Path: def.Path, Offset: -1, Name: def.Name, Err: err}
 		}
 	}
 	dst = append(dst, body...)
 	return dst, scratch, nil
+}
+
+// encodeUnits returns the logical unit count to write into the length prefix for
+// a freshly-encoded body. For digit/char/byte values it is the canonical length
+// (so an odd BCD digit count is preserved); for composites it is the body byte
+// count.
+func encodeUnits(def *FieldDef, v Value, body []byte) int {
+	switch v.Kind() {
+	case KindNumeric, KindString, KindBytes:
+		return len(v.Bytes())
+	case KindComposite:
+		return len(body)
+	case KindAmount:
+		// Amounts are fixed-width in practice (no length prefix); fall back to
+		// the canonical digit count if one is ever variable.
+		if n := len(v.Bytes()); n > 0 {
+			return n
+		}
+		return def.MaxLen
+	default:
+		return len(body)
+	}
 }
 
 // mtiInClasses reports whether mti begins with any of the listed class prefixes

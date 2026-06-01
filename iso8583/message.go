@@ -16,6 +16,7 @@ import (
 	"fmt"
 	"iter"
 	"strconv"
+	"strings"
 )
 
 // Message is a schema-driven, array-indexed sparse field set over a retained
@@ -31,6 +32,11 @@ type Message struct {
 	owned  bool   // true once any field is mutated (copy-on-write engaged)
 	dirty  Bitmap // fields mutated since decode -> drives selective re-marshal
 	sealed bool   // immutable view; mutation requires Clone()
+
+	// tags holds BER-TLV / tag-addressed children for a TLV (schema.isTLV)
+	// sub-message; tagOrder preserves emit order. nil for positional schemas.
+	tags     map[string]tagSlot
+	tagOrder []string
 }
 
 type slot struct {
@@ -39,9 +45,16 @@ type slot struct {
 	decoded bool // Value materialised (memoised) on first typed access
 	dirty   bool // value replaced since decode (needs re-encode)
 	fromSrc bool // body span [bodyOff,bodyEnd) into Message.src is valid
+	units   int  // logical unit count (digits/chars/octets) for this field
 	wireOff int  // absolute offset of the field on the wire (prefix start)
 	bodyOff int  // absolute offset of the body
 	bodyEnd int  // absolute offset just past the body (== field end)
+}
+
+// tagSlot holds one tag-addressed child value in a TLV sub-message.
+type tagSlot struct {
+	v       Value
+	present bool
 }
 
 // New returns an empty, mutable message for the given schema, ready for Set.
@@ -125,10 +138,17 @@ func (m *Message) GetP(p FieldPath) (Value, bool) {
 		return Value{}, false
 	}
 	head := p.Head()
-	if head.IsTag() {
-		return Value{}, false // top-level fields are numeric DEs
+
+	var v Value
+	var ok bool
+	if m.schema != nil && m.schema.isTLV {
+		// Tag-addressed sub-message (BER-TLV): every element is a hex tag.
+		v, ok = m.GetTag(tagKey(head))
+	} else if head.IsTag() {
+		return Value{}, false // positional schema: top-level fields are numeric DEs
+	} else {
+		v, ok = m.Get(int(head.N))
 	}
-	v, ok := m.Get(int(head.N))
 	if !ok || p.Len() == 1 {
 		return v, ok
 	}
@@ -152,6 +172,55 @@ func (m *Message) GetS(s string) (Value, bool) {
 // MTI returns the message type indicator (DE 0).
 func (m *Message) MTI() (Value, bool) { return m.Get(0) }
 
+// --- tag-addressed (BER-TLV) children ---
+
+// NewTLV returns an empty tag-addressed child message for a TLV sub-schema.
+// Composite codecs (e.g. fieldcodec/tlv) build a child with NewTLV + PutTag
+// during decode, and read it back with TagSeq during encode.
+func NewTLV(sub *Schema) *Message {
+	return &Message{schema: sub, tags: make(map[string]tagSlot), owned: true}
+}
+
+// PutTag stores a decoded canonical value under a BER-TLV tag (canonicalised to
+// uppercase), preserving first-seen order for deterministic re-encoding.
+func (m *Message) PutTag(tag string, v Value) {
+	key := strings.ToUpper(tag)
+	if m.tags == nil {
+		m.tags = make(map[string]tagSlot)
+	}
+	if _, seen := m.tags[key]; !seen {
+		m.tagOrder = append(m.tagOrder, key)
+	}
+	m.tags[key] = tagSlot{v: v, present: true}
+}
+
+// GetTag returns the value stored under a BER-TLV tag.
+func (m *Message) GetTag(tag string) (Value, bool) {
+	if m.tags == nil {
+		return Value{}, false
+	}
+	ts, ok := m.tags[strings.ToUpper(tag)]
+	if !ok || !ts.present {
+		return Value{}, false
+	}
+	return ts.v, true
+}
+
+// TagSeq iterates tag-addressed children in first-seen / declaration order.
+func (m *Message) TagSeq() iter.Seq2[string, Value] {
+	return func(yield func(string, Value) bool) {
+		for _, key := range m.tagOrder {
+			ts, ok := m.tags[key]
+			if !ok || !ts.present {
+				continue
+			}
+			if !yield(key, ts.v) {
+				return
+			}
+		}
+	}
+}
+
 func (m *Message) decodeSlot(de int) (Value, bool) {
 	s := &m.slots[de]
 	if !s.present {
@@ -172,7 +241,7 @@ func (m *Message) decodeSlot(de int) (Value, bool) {
 	body := m.src[s.bodyOff:s.bodyEnd]
 	var v Value
 	if def.Codec != nil {
-		dv, err := def.Codec.DecodeBody(body, def)
+		dv, err := def.Codec.DecodeBody(body, s.units, def)
 		if err != nil {
 			return Value{}, false
 		}
@@ -240,14 +309,93 @@ func (m *Message) Set(de int, v any) error {
 	return nil
 }
 
-// SetP stores a value at a pre-parsed path.
+// SetP stores a value at a pre-parsed path, creating composite children as
+// needed (copy-on-write). It handles top-level DEs, tag-addressed TLV children,
+// and one level of composite nesting (e.g. "55.9F26").
 func (m *Message) SetP(p FieldPath, v any) error {
-	if p.Len() == 1 && !p.Head().IsTag() {
-		return m.Set(int(p.Head().N), v)
+	if m.sealed {
+		return &FieldError{Path: p, Offset: -1, Err: errSealed}
 	}
-	// Nested composite writes are completed in Phase 2 (composite/TLV codecs);
-	// the addressing and engine plumbing already accept the path grammar.
-	return &FieldError{Path: p, Offset: -1, Err: fmt.Errorf("nested write %q not yet supported", p.String())}
+	if p.Len() == 0 {
+		return &FieldError{Path: p, Offset: -1, Err: errNotPresent}
+	}
+	head := p.Head()
+
+	// Inside a tag-addressed (TLV) sub-message: set a tag value.
+	if m.schema != nil && m.schema.isTLV {
+		tag := tagKey(head)
+		tagDef, _ := m.schema.LookupTag(tag)
+		if p.Len() > 1 {
+			return &FieldError{Path: p, Offset: -1, Err: fmt.Errorf("nested constructed TLV write %q not supported", p.String())}
+		}
+		val, err := makeValue(tagDef, v)
+		if err != nil {
+			return err
+		}
+		if tagDef != nil {
+			val.codec = tagDef.Codec
+		}
+		m.PutTag(tag, val)
+		m.owned = true
+		return nil
+	}
+
+	if head.IsTag() {
+		return &FieldError{Path: p, Offset: -1, Err: errUnknownDE}
+	}
+	de := int(head.N)
+	if p.Len() == 1 {
+		return m.Set(de, v)
+	}
+
+	// Descend into a composite child.
+	def := m.def(de)
+	if def == nil || def.Sub == nil {
+		return &FieldError{Path: p, Offset: -1, Err: fmt.Errorf("DE %d is not a composite", de)}
+	}
+	child, err := m.ensureChild(de, def)
+	if err != nil {
+		return err
+	}
+	return child.SetP(p.Tail(), v)
+}
+
+// ensureChild returns the mutable composite child for a top-level composite DE,
+// decoding an existing one from src or creating a fresh child, and marking the
+// parent dirty so the child re-encodes on Marshal.
+func (m *Message) ensureChild(de int, def *FieldDef) (*Message, error) {
+	if de >= len(m.slots) {
+		return nil, &FieldError{Path: DE(de), Offset: -1, Err: errUnknownDE}
+	}
+	s := &m.slots[de]
+	if s.present {
+		v, ok := m.decodeSlot(de)
+		if ok {
+			if child, ok := v.Composite(); ok {
+				s.dirty = true
+				s.fromSrc = false
+				m.owned = true
+				return child, nil
+			}
+		}
+	}
+	var child *Message
+	if def.Sub != nil && def.Sub.isTLV {
+		child = NewTLV(def.Sub)
+	} else {
+		child = New(def.Sub)
+	}
+	s.v = CompositeValue(nil, child)
+	s.present = true
+	s.decoded = true
+	s.dirty = true
+	s.fromSrc = false
+	m.owned = true
+	if de >= 1 {
+		m.bm.Set(de)
+		m.dirty.Set(de)
+	}
+	return child, nil
 }
 
 // SetS stores a value at a textual path.

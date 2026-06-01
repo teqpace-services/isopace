@@ -269,6 +269,10 @@ func applyOpts(d *FieldDef, opts []FieldOpt) {
 // a fixed field).
 func MaxLen(n int) FieldOpt { return func(d *FieldDef) { d.MaxLen = n } }
 
+// Scale sets the decimal scale (minor-unit digits) for a KindAmount field, e.g.
+// Scale(2) decodes a 12-digit DE 4 of "000000001099" to 10.99.
+func Scale(n uint8) FieldOpt { return func(d *FieldDef) { d.Scale = n } }
+
 // Pad sets fixed-field padding.
 func Pad(p PadRule) FieldOpt { return func(d *FieldDef) { d.Pad = p } }
 

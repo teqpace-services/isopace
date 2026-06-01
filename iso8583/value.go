@@ -173,3 +173,31 @@ func parseUint(b []byte) (uint64, error) {
 // btoaTrim converts a digit slice to a string for strconv, preserving content.
 // (A dedicated digit scanner is a Phase-5 optimisation; correctness first.)
 func btoaTrim(b []byte) string { return string(b) }
+
+// Value constructors for codec packages.
+//
+// Value's fields are unexported, so FieldCodec implementations living in other
+// packages (fieldcodec/, fieldcodec/tlv/, …) build canonical Values through
+// these constructors. They must honour the canonical value form documented in
+// codec_iface.go: text/numeric raw is ASCII/UTF-8, bytes raw is the octets,
+// amount carries the exact Decimal.
+
+// StringValue builds a canonical KindString value from decoded text bytes.
+func StringValue(raw []byte) Value { return Value{raw: raw, kind: KindString, off: -1} }
+
+// NumericValue builds a canonical KindNumeric value from ASCII decimal digits.
+func NumericValue(raw []byte) Value { return Value{raw: raw, kind: KindNumeric, off: -1} }
+
+// BytesValue builds a canonical KindBytes value aliasing the given octets.
+func BytesValue(raw []byte) Value { return Value{raw: raw, kind: KindBytes, off: -1} }
+
+// AmountValue builds a canonical KindAmount value from the exact Decimal. raw
+// may be nil or the wire-ish digits for Bytes()/String() display.
+func AmountValue(dec Decimal, raw []byte) Value {
+	return Value{raw: raw, kind: KindAmount, dec: dec, off: -1}
+}
+
+// CompositeValue builds a KindComposite value wrapping a decoded child message.
+func CompositeValue(raw []byte, sub *Message) Value {
+	return Value{raw: raw, kind: KindComposite, sub: sub, off: -1}
+}

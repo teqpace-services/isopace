@@ -12,7 +12,10 @@
 
 package iso8583
 
-import "sync"
+import (
+	"strings"
+	"sync"
+)
 
 // PadSide selects which end of a fixed field is padded.
 type PadSide uint8
@@ -53,6 +56,7 @@ type FieldDef struct {
 	Codec    FieldCodec   // VALUE codec
 	Length   LengthCodec  // LENGTH-PREFIX codec; nil == fixed MaxLen wire bytes
 	MaxLen   int          // max value length (digits/chars/octets / wire bytes for fixed)
+	Scale    uint8        // decimal scale for KindAmount fields (minor-unit digits)
 	Pad      PadRule      // fixed-field padding
 	Validate []Validator  // ordered field-level rules
 	Required RequiredRule // presence requirement
@@ -111,6 +115,13 @@ func (s *Schema) Field(de int) (*FieldDef, bool) {
 // tagDef returns the definition for a BER-TLV tag (canonical uppercase).
 func (s *Schema) tagDef(tag string) (*FieldDef, bool) {
 	d, ok := s.tags[tag]
+	return d, ok
+}
+
+// LookupTag returns the FieldDef for a BER-TLV tag (matched case-insensitively),
+// for composite codecs resolving wire tags against a TLV sub-schema.
+func (s *Schema) LookupTag(tag string) (*FieldDef, bool) {
+	d, ok := s.tags[strings.ToUpper(tag)]
 	return d, ok
 }
 
