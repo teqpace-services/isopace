@@ -1,13 +1,13 @@
 # Code ownership for Isopace. Listed owners are auto-requested for review and,
 # when "Require review from Code Owners" branch protection is on, must approve.
 #
-# TODO: replace @teqpace-services/maintainers with the real GitHub team/usernames.
+# canaan5 is the sole maintainer for now; add more owners as the team grows.
 
-*                       @teqpace-services/maintainers
+*                       @canaan5
 
 # Security-critical and legal files warrant extra scrutiny.
-/vault/                 @teqpace-services/maintainers
-/LICENSE                @teqpace-services/maintainers
-/COMMERCIAL-LICENSE.md  @teqpace-services/maintainers
-/CLA.md                 @teqpace-services/maintainers
-/.github/               @teqpace-services/maintainers
+/vault/                 @canaan5
+/LICENSE                @canaan5
+/COMMERCIAL-LICENSE.md  @canaan5
+/CLA.md                 @canaan5
+/.github/               @canaan5
