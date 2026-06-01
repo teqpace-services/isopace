@@ -97,6 +97,44 @@ func TestJSONMaskPAN(t *testing.T) {
 	}
 }
 
+// TestJSONUnmarshalDeterministic guards against random map iteration of TLV
+// tags making the reconstructed wire non-deterministic. The TLV object is
+// re-parsed many times; every reconstruction must yield identical wire.
+func TestJSONUnmarshalDeterministic(t *testing.T) {
+	s := packager.ISO87A()
+	c := iso8583.NewCodec(s)
+	data, err := jsonio.Marshal(sample(t, s))
+	if err != nil {
+		t.Fatalf("Marshal: %v", err)
+	}
+	var first []byte
+	for i := 0; i < 64; i++ {
+		m, err := jsonio.Unmarshal(data, s)
+		if err != nil {
+			t.Fatalf("Unmarshal: %v", err)
+		}
+		wire, err := c.Marshal(m, nil)
+		if err != nil {
+			t.Fatalf("Marshal: %v", err)
+		}
+		if first == nil {
+			first = wire
+		} else if !bytes.Equal(first, wire) {
+			t.Fatalf("non-deterministic TLV round-trip at iteration %d:\n first=%x\n  got=%x", i, first, wire)
+		}
+	}
+}
+
+// TestJSONTLVOnNonComposite ensures malformed JSON (tlv on a scalar DE) errors
+// cleanly instead of dereferencing a nil sub-schema.
+func TestJSONTLVOnNonComposite(t *testing.T) {
+	s := packager.ISO87A()
+	bad := []byte(`{"mti":"0200","fields":{"4":{"tlv":{"9F26":"A1B2"}}}}`)
+	if _, err := jsonio.Unmarshal(bad, s); err == nil {
+		t.Errorf("expected error for tlv on non-composite DE 4, got nil (panic risk)")
+	}
+}
+
 func TestJSONAmountShape(t *testing.T) {
 	s := packager.ISO87A()
 	m := sample(t, s)
