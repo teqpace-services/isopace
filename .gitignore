@@ -7,6 +7,8 @@
 /bin/
 /dist/
 /build/
+/tmp/
+build-errors.log
 
 # Test and coverage artifacts
 *.test
