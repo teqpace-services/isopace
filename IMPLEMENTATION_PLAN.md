@@ -393,7 +393,7 @@ release) is the maintainer's to run.
 | 🟢 | Employment IP-assignment vests Isopace copyright in Teqpace | confirmed ✅ |
 | 🟢 | Distributed `Space` backend | **NATS / JetStream** (Phase 9) |
 | 🟢 | protobuf + ISO 20022 scope | **full** (Phase 4) |
-| 🔴 | Commercial-license terms drafted by counsel | before commercial sale |
+| 🟡 | Commercial-license terms drafted by counsel | draft template prepared (`COMMERCIAL-AGREEMENT.md`); **pending counsel review** before commercial sale |
 
 ---
 
