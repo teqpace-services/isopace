@@ -3,7 +3,7 @@
 > **Living document.** Status colours are updated as work lands. The detailed
 > design each phase implements lives in [`ARCHITECTURE.md`](ARCHITECTURE.md).
 >
-> **Last updated:** 2026-06-01 (Phases 0–3 landed: core, codec catalogs, profiles)
+> **Last updated:** 2026-06-01 (Phases 0–4 landed: core, codecs, profiles, renderings)
 
 ---
 
@@ -31,7 +31,7 @@ tests (and fuzz/bench where noted) pass, SPDX header present, public API matches
 | 1 | ISO-8583 core (`iso8583/`) | 🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩 | 100 |
 | 2 | Codec catalogs (`fieldcodec/`, `lengthcodec/`) | 🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩 | 100 |
 | 3 | Packager profiles (`packager/`) | 🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩 | 100 |
-| 4 | Alternate renderings (`render/`) | ⬜⬜⬜⬜⬜⬜⬜⬜⬜⬜ | 0 |
+| 4 | Alternate renderings (`render/`) | 🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩 | 100 |
 | 5 | Conformance & QA harness | ⬜⬜⬜⬜⬜⬜⬜⬜⬜⬜ | 0 |
 | 6 | Transport (`link/`, `listener/`, `switch/`) | ⬜⬜⬜⬜⬜⬜⬜⬜⬜⬜ | 0 |
 | 7 | Runtime (`runtime/`) | ⬜⬜⬜⬜⬜⬜⬜⬜⬜⬜ | 0 |
@@ -154,10 +154,21 @@ The dependency-free heart. Built in slices so each compiles and tests green.
 
 | Status | Task | File |
 |:------:|------|------|
-| ⚪ | JSON render/parse (schema-aware, PAN masking) | `render/jsonio/` |
-| ⚪ | protobuf render (descriptor-driven) | `render/protobuf/` |
-| ⚪ | ISO 20022 bridge (pacs/pain/camt) | `render/iso20022/` |
-| ⚪ | Cross-format round-trip tests (one `Message`, many backends) | `*_test.go` |
+| 🟢 | JSON render/parse (schema-aware, PAN masking, TLV nesting) | `render/jsonio/` |
+| 🟢 | protobuf render (DE-keyed wire codec, stdlib) | `render/protobuf/` |
+| 🟢 | ISO 20022 bridge (representative pacs.008 subset) | `render/iso20022/` |
+| 🟢 | Cross-format round-trip tests (one `Message`, many backends) | `*_test.go` |
+
+> **Done:** every renderer consumes only the read-only `View`, so the same
+> `*Message` projects losslessly to ISO-8583 wire, JSON and protobuf
+> (cross-format test proves all three reconstruct a wire-identical message),
+> and to a pacs.008 subset for the mapped DEs. All stdlib — no protobuf/YAML/XML
+> third-party dependency. `go test -race` green across all 10 packages.
+> Notes: protobuf field number = DE (field 1 = MTI), descriptor-compatible
+> without a protobuf runtime; the ISO 20022 bridge is a representative pacs.008
+> mapping (amount/currency, identifiers, datetime, debtor account) — DEs outside
+> the map are not carried, and currency rides as the numeric ISO-8583 code
+> pending a numeric→alpha ISO 4217 table.
 
 ---
 
