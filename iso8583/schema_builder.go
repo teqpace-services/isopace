@@ -26,14 +26,15 @@ const defaultMTILen = 4
 // reports every problem at once. A builder is not safe for concurrent use; the
 // Schema it produces is.
 type SchemaBuilder struct {
-	id     string
-	mti    *FieldDef
-	bitmap BitmapSpec
-	defs   map[int]*FieldDef
-	tags   map[string]*FieldDef
-	order  []string // tag insertion order, for stable TLV iteration
-	isTLV  bool
-	errs   []error
+	id         string
+	mti        *FieldDef
+	bitmap     BitmapSpec
+	defs       map[int]*FieldDef
+	tags       map[string]*FieldDef
+	order      []string // tag insertion order, for stable TLV iteration
+	isTLV      bool
+	headerless bool // positional bitmap group with no MTI (a subfield packager)
+	errs       []error
 }
 
 // NewSchema starts a new schema builder with the given identifier.
@@ -61,6 +62,17 @@ func (b *SchemaBuilder) MTI(c FieldCodec) *SchemaBuilder {
 // Bitmap sets the bitmap encoding spec.
 func (b *SchemaBuilder) Bitmap(spec BitmapSpec) *SchemaBuilder {
 	b.bitmap = spec
+	return b
+}
+
+// Headerless marks a positional schema as carrying no MTI: its wire form is a
+// bitmap followed by its data elements, with no message-type indicator. This is
+// the shape of a subfield group nested under a composite DE (e.g. the DE 127
+// subfield packager), where the container's length prefix delimits the body and
+// a sub-bitmap selects which subfields are present. A headerless schema still
+// requires a bitmap codec.
+func (b *SchemaBuilder) Headerless() *SchemaBuilder {
+	b.headerless = true
 	return b
 }
 
@@ -153,7 +165,7 @@ func (b *SchemaBuilder) Build() (*Schema, error) {
 		if b.bitmap.Levels < 1 || b.bitmap.Levels > 3 {
 			errs = append(errs, fmt.Errorf("bitmap levels %d out of range 1..3", b.bitmap.Levels))
 		}
-		if b.mti == nil {
+		if b.mti == nil && !b.headerless {
 			errs = append(errs, errors.New("schema has no MTI codec"))
 		}
 	}
@@ -239,6 +251,7 @@ func (s *Schema) Derive(id string) *SchemaBuilder {
 	b := NewSchema(id)
 	b.bitmap = s.bitmap
 	b.isTLV = s.isTLV
+	b.headerless = s.mti == nil && !s.isTLV
 	if s.mti != nil {
 		b.mti = s.mti.clone()
 	}

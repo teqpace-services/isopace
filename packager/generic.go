@@ -19,6 +19,7 @@ import (
 	"strconv"
 
 	"github.com/teqpace-services/isopace/fieldcodec"
+	"github.com/teqpace-services/isopace/fieldcodec/subfield"
 	"github.com/teqpace-services/isopace/fieldcodec/tlv"
 	"github.com/teqpace-services/isopace/iso8583"
 )
@@ -48,23 +49,29 @@ type bitmapConfig struct {
 	Levels int    `json:"levels"`
 }
 
+// compositeConfig declares a composite sub-schema. Type "tlv" (the default)
+// addresses children by BER-TLV tag; type "subfields" is a positional
+// subfield packager — a headerless bitmap + positional subfields (e.g. DE 127).
 type compositeConfig struct {
-	Tags map[string]tagConfig `json:"tags"`
+	Type   string                 `json:"type,omitempty"`   // "tlv" (default) | "subfields"
+	Bitmap *bitmapConfig          `json:"bitmap,omitempty"` // subfields: sub-bitmap encoding
+	Tags   map[string]tagConfig   `json:"tags,omitempty"`   // tlv: children by hex tag
+	Fields map[string]fieldConfig `json:"fields,omitempty"` // subfields: children by index
 }
 
 type tagConfig struct {
 	Name  string `json:"name"`
 	Codec string `json:"codec"`
-	Max   int    `json:"max"`
+	Max   int    `json:"max,omitempty"`
 }
 
 type fieldConfig struct {
 	Name      string `json:"name"`
-	Codec     string `json:"codec"`
+	Codec     string `json:"codec,omitempty"`
 	Length    string `json:"length"`
-	Max       int    `json:"max"`
-	Scale     uint8  `json:"scale"`
-	Composite string `json:"composite"` // sub-schema id for a BER-TLV field
+	Max       int    `json:"max,omitempty"`
+	Scale     uint8  `json:"scale,omitempty"`
+	Composite string `json:"composite,omitempty"` // sub-schema id for a composite field
 }
 
 // Load builds a schema from a JSON document, resolving names against reg.
@@ -88,24 +95,14 @@ func LoadEmbedded(name string) (*iso8583.Schema, error) {
 
 func (cfg schemaConfig) build(reg *fieldcodec.Registry) (*iso8583.Schema, error) {
 	subs := make(map[string]*iso8583.Schema, len(cfg.Composites))
+	subType := make(map[string]string, len(cfg.Composites))
 	for id, cc := range cfg.Composites {
-		sb := iso8583.NewSchema(id)
-		for tag, tc := range cc.Tags {
-			vc, ok := reg.Lookup(tc.Codec)
-			if !ok {
-				return nil, fmt.Errorf("packager: composite %s tag %s: unknown codec %q", id, tag, tc.Codec)
-			}
-			opts := []iso8583.FieldOpt{}
-			if tc.Max > 0 {
-				opts = append(opts, iso8583.MaxLen(tc.Max))
-			}
-			sb.Tag(tag, tc.Name, vc, opts...)
-		}
-		s, err := sb.Build()
+		s, kind, err := cc.build(id, reg)
 		if err != nil {
 			return nil, err
 		}
 		subs[id] = s
+		subType[id] = kind
 	}
 
 	mti, ok := reg.Lookup(cfg.MTI)
@@ -134,7 +131,11 @@ func (cfg schemaConfig) build(reg *fieldcodec.Registry) (*iso8583.Schema, error)
 			if !ok {
 				return nil, fmt.Errorf("packager: DE %d references unknown composite %q", de, fc.Composite)
 			}
-			b.Composite(de, fc.Name, sub, length, iso8583.WithCodec(tlv.BERTLV))
+			cc := tlv.BERTLV
+			if subType[fc.Composite] == "subfields" {
+				cc = subfield.Packager
+			}
+			b.Composite(de, fc.Name, sub, length, iso8583.WithCodec(cc))
 			continue
 		}
 		vc, ok := reg.Lookup(fc.Codec)
@@ -148,6 +149,63 @@ func (cfg schemaConfig) build(reg *fieldcodec.Registry) (*iso8583.Schema, error)
 		b.Field(de, fc.Name, vc, length, opts...)
 	}
 	return b.Build()
+}
+
+// build assembles a composite sub-schema, returning the schema and its kind
+// ("tlv" or "subfields") so the parent field can be wired with the matching
+// composite value codec.
+func (cc compositeConfig) build(id string, reg *fieldcodec.Registry) (*iso8583.Schema, string, error) {
+	switch cc.Type {
+	case "", "tlv":
+		sb := iso8583.NewSchema(id)
+		for tag, tc := range cc.Tags {
+			vc, ok := reg.Lookup(tc.Codec)
+			if !ok {
+				return nil, "", fmt.Errorf("packager: composite %s tag %s: unknown codec %q", id, tag, tc.Codec)
+			}
+			opts := []iso8583.FieldOpt{}
+			if tc.Max > 0 {
+				opts = append(opts, iso8583.MaxLen(tc.Max))
+			}
+			sb.Tag(tag, tc.Name, vc, opts...)
+		}
+		s, err := sb.Build()
+		return s, "tlv", err
+	case "subfields":
+		if cc.Bitmap == nil {
+			return nil, "", fmt.Errorf("packager: subfield composite %s has no bitmap", id)
+		}
+		bm, ok := reg.LookupBitmap(cc.Bitmap.Codec)
+		if !ok {
+			return nil, "", fmt.Errorf("packager: subfield composite %s: unknown bitmap codec %q", id, cc.Bitmap.Codec)
+		}
+		sb := iso8583.NewSchema(id).
+			Headerless().
+			Bitmap(iso8583.BitmapSpec{Codec: bm, Levels: cc.Bitmap.Levels})
+		for deStr, fc := range cc.Fields {
+			de, err := strconv.Atoi(deStr)
+			if err != nil {
+				return nil, "", fmt.Errorf("packager: subfield composite %s: field key %q is not an index", id, deStr)
+			}
+			length, err := resolveLength(reg, fc.Length)
+			if err != nil {
+				return nil, "", err
+			}
+			vc, ok := reg.Lookup(fc.Codec)
+			if !ok {
+				return nil, "", fmt.Errorf("packager: subfield composite %s sub %d: unknown codec %q", id, de, fc.Codec)
+			}
+			opts := []iso8583.FieldOpt{iso8583.MaxLen(fc.Max)}
+			if fc.Scale > 0 {
+				opts = append(opts, iso8583.Scale(fc.Scale))
+			}
+			sb.Field(de, fc.Name, vc, length, opts...)
+		}
+		s, err := sb.Build()
+		return s, "subfields", err
+	default:
+		return nil, "", fmt.Errorf("packager: composite %s: unknown type %q", id, cc.Type)
+	}
 }
 
 // resolveLength maps a length name to a codec; "", "len.fixed" -> nil (the
