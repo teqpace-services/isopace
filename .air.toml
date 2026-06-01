@@ -9,14 +9,20 @@
 # simulator test host (an issuer + an admin HTTP endpoint). To live-reload a
 # different program, change [build].cmd / .bin / .args_bin, e.g. point them at
 # ./examples/issuer.
+#
+# NOTE on the build output path: air resolves `bin` to an absolute path and
+# splits it on spaces, so a project directory containing a space (this one is
+# under ".../Teqpace - Projects/...") breaks the *run* step ("/bin/sh: ...: is a
+# directory", exit 126). To avoid that we build the binary to /tmp, which has no
+# spaces. The clean long-term fix is to keep the checkout in a space-free path.
 
 root = "."
 tmp_dir = "tmp"
 
 [build]
-  # Rebuild the simulator into tmp/ on any .go change.
-  cmd = "go build -o ./tmp/isopace-sim ./examples/simulator"
-  bin = "./tmp/isopace-sim"
+  # Build to a space-free path so air can run it regardless of the repo location.
+  cmd = "go build -o /tmp/isopace-sim ./examples/simulator"
+  bin = "/tmp/isopace-sim"
   # Flags passed to the rebuilt binary on each run.
   args_bin = ["-addr", "127.0.0.1:8583", "-admin", "127.0.0.1:8584", "-limit", "10000"]
   include_ext = ["go", "toml", "json"]
