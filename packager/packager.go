@@ -145,6 +145,9 @@ func Profiles() map[string]func() *iso8583.Schema {
 		"iso93-b":    ISO93B,
 		"visa-base1": VisaBaseI,
 		"mastercard": Mastercard,
+		"zone":       Zone,
+		"fields":     Fields,
+		"switch":     Switch,
 	}
 }
 
