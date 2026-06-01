@@ -37,6 +37,23 @@ var (
 	ErrShortBitmap = errors.New("fieldcodec: truncated bitmap")
 )
 
+// digitCount returns the logical digit count for a packed (BCD) decode. The
+// engine supplies units (the length prefix value, or MaxLen for a fixed field);
+// when a caller cannot supply it (e.g. a BER-TLV envelope, which preserves only
+// octet length), fall back to FieldDef.MaxLen. Deriving it from len(body)*2
+// would be wrong for odd digit counts (the pad nibble would become a digit), so
+// that heuristic is deliberately avoided. As a last resort an empty value
+// decodes (Unpack with n==0), never corrupt digits.
+func digitCount(units int, def *iso8583.FieldDef, _ []byte) int {
+	if units > 0 {
+		return units
+	}
+	if def != nil && def.MaxLen > 0 {
+		return def.MaxLen
+	}
+	return 0
+}
+
 // isFixed reports whether a field is fixed-width: no length prefix and a
 // positive MaxLen. A zero-MaxLen field with no prefix (e.g. a BER-TLV tag value,
 // whose length comes from the TLV envelope) is treated as variable and emitted

@@ -61,7 +61,9 @@ func (c bitmapCodec) ReadBitmap(src []byte, off, maxLevels int) (iso8583.Bitmap,
 	var bm iso8583.Bitmap
 	wl := c.repr.wireLen()
 	for level := 0; level < 3; level++ {
-		if off+wl > len(src) {
+		// Overflow-safe bounds check (off can be large/adversarial): never form
+		// off+wl, which could wrap negative and pass a naive comparison.
+		if off < 0 || off > len(src) || len(src)-off < wl {
 			return bm, 0, ErrShortBitmap
 		}
 		w, ok := c.repr.get(src[off : off+wl])

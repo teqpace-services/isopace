@@ -105,6 +105,68 @@ func TestBERTLVKnownEncoding(t *testing.T) {
 	}
 }
 
+// TestBERTLVPackedTag covers a packed-BCD tag with an ODD digit count: BER
+// preserves only octet length, so the codec must take the digit count from the
+// tag's MaxLen, not the wire byte count.
+func TestBERTLVPackedTag(t *testing.T) {
+	emv := iso8583.NewSchema("emv-packed").
+		Tag("DF01", "Packed Field", fieldcodec.BCD, iso8583.MaxLen(5)). // 5 digits -> 3 bytes
+		MustBuild()
+	s := iso8583.NewSchema("packed-parent").
+		MTI(fieldcodec.NumASCII).
+		Bitmap(iso8583.BitmapSpec{Codec: fieldcodec.BitmapBinary, Levels: 2}).
+		Composite(55, "EMV", emv, lengthcodec.LLLVarASCII, iso8583.WithCodec(tlv.BERTLV)).
+		MustBuild()
+	c := iso8583.NewCodec(s)
+
+	m := iso8583.New(s)
+	must(t, m.Set(0, "0200"))
+	must(t, m.SetS("55.DF01", "12345"))
+
+	wire, err := c.Marshal(m, nil)
+	if err != nil {
+		t.Fatalf("Marshal: %v", err)
+	}
+	m2, err := c.Unmarshal(wire)
+	if err != nil {
+		t.Fatalf("Unmarshal: %v", err)
+	}
+	if got, _ := iso8583.GetS[string](m2, "55.DF01"); got != "12345" {
+		t.Errorf("packed BCD tag = %q want 12345 (digit count from MaxLen, not bytes)", got)
+	}
+}
+
+// TestBERTLVCloneCOW verifies a clone's nested DE 55 write does not leak into
+// the original (composite children must be deep-copied by Clone).
+func TestBERTLVCloneCOW(t *testing.T) {
+	s := parentSchema()
+	cryptoA := []byte{0xAA, 0xAA, 0xAA, 0xAA, 0xAA, 0xAA, 0xAA, 0xAA}
+	cryptoB := []byte{0xBB, 0xBB, 0xBB, 0xBB, 0xBB, 0xBB, 0xBB, 0xBB}
+
+	m := iso8583.New(s)
+	must(t, m.Set(0, "0200"))
+	must(t, m.SetS("55.9F26", cryptoA))
+
+	clone := m.Clone()
+	must(t, clone.SetS("55.9F26", cryptoB))
+	must(t, clone.SetS("55.9F36", int64(99)))
+
+	// Original must be untouched.
+	if got, _ := iso8583.GetS[[]byte](m, "55.9F26"); !bytes.Equal(got, cryptoA) {
+		t.Errorf("original 55.9F26 leaked: % X want % X", got, cryptoA)
+	}
+	if _, ok := m.GetS("55.9F36"); ok {
+		t.Errorf("original gained 55.9F36 from clone mutation")
+	}
+	// Clone reflects its own edits.
+	if got, _ := iso8583.GetS[[]byte](clone, "55.9F26"); !bytes.Equal(got, cryptoB) {
+		t.Errorf("clone 55.9F26 = % X want % X", got, cryptoB)
+	}
+	if atc, _ := iso8583.GetS[int64](clone, "55.9F36"); atc != 99 {
+		t.Errorf("clone 55.9F36 = %d want 99", atc)
+	}
+}
+
 func must(t *testing.T, err error) {
 	t.Helper()
 	if err != nil {

@@ -67,10 +67,7 @@ func (amountASCII) Name() string       { return "amount.ascii" }
 type amountBCD struct{}
 
 func (amountBCD) DecodeBody(body []byte, units int, def *iso8583.FieldDef) (iso8583.Value, error) {
-	n := units
-	if n <= 0 {
-		n = len(body) * 2
-	}
+	n := digitCount(units, def, body)
 	digits, err := bcd.Unpack(body, n)
 	if err != nil {
 		return iso8583.Value{}, err

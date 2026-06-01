@@ -60,10 +60,7 @@ func (numEBCDIC) Name() string       { return "num.ebcdic" }
 type bcdNum struct{}
 
 func (bcdNum) DecodeBody(body []byte, units int, def *iso8583.FieldDef) (iso8583.Value, error) {
-	n := units
-	if n <= 0 {
-		n = len(body) * 2
-	}
+	n := digitCount(units, def, body)
 	digits, err := bcd.Unpack(body, n)
 	if err != nil {
 		return iso8583.Value{}, err
@@ -89,10 +86,7 @@ func (bcdNum) BodyBytes(units int) int { return bcd.PackedLen(units) }
 type rbcdNum struct{}
 
 func (rbcdNum) DecodeBody(body []byte, units int, def *iso8583.FieldDef) (iso8583.Value, error) {
-	n := units
-	if n <= 0 {
-		n = len(body) * 2
-	}
+	n := digitCount(units, def, body)
 	digits, err := bcd.UnpackRight(body, n)
 	if err != nil {
 		return iso8583.Value{}, err
