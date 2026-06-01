@@ -3,7 +3,7 @@
 > **Living document.** Status colours are updated as work lands. The detailed
 > design each phase implements lives in [`ARCHITECTURE.md`](ARCHITECTURE.md).
 >
-> **Last updated:** 2026-06-01 (Phases 0–11 landed: core … vault, rbac/store/ops — reviewed)
+> **Last updated:** 2026-06-01 (Phases 0–12 landed: **v0.1.0 feature-complete** — examples, docs, release tag)
 
 ---
 
@@ -39,7 +39,7 @@ tests (and fuzz/bench where noted) pass, SPDX header present, public API matches
 | 9 | Coordination (`space/`) | 🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩 | 100 |
 | 10 | Security / HSM (`vault/`) | 🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩 | 100 |
 | 11 | Enterprise / Ops (`rbac/`, `store/`, `ops/`) | 🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩 | 100 |
-| 12 | Release engineering (v0.1.0) | ⬜⬜⬜⬜⬜⬜⬜⬜⬜⬜ | 0 |
+| 12 | Release engineering (v0.1.0) | 🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩 | 100 |
 
 **Legend for bars:** 🟩 done · 🟨 in progress · ⬜ remaining (each phase = 10 cells).
 
@@ -354,13 +354,34 @@ The dependency-free heart. Built in slices so each compiles and tests green.
 
 ## Phase 12 — Release engineering (v0.1.0)
 
-| Status | Task |
-|:------:|------|
-| ⚪ | Runnable examples (acquirer + issuer) |
-| ⚪ | Simulator / test host |
-| ⚪ | Docs site + API reference |
-| ⚪ | SemVer policy + `CHANGELOG.md` |
-| ⚪ | Tag `v0.1.0` |
+| Status | Task | Artifact |
+|:------:|------|----------|
+| 🟢 | Runnable examples (acquirer + issuer) | `examples/acquirer`, `examples/issuer`, `examples/posdemo` |
+| 🟢 | Simulator / test host | `examples/simulator` (runtime.Host + listener + ops admin API) |
+| 🟢 | Docs + API reference | `README.md`, `docs/getting-started.md`; GoDoc is the API reference |
+| 🟢 | SemVer policy + `CHANGELOG.md` | `docs/versioning.md`, `CHANGELOG.md` |
+| 🟢 | Tag `v0.1.0` | annotated tag created locally (unpushed — push is the maintainer's) |
+
+> **Done:** the framework is assembled into runnable programs — an `issuer` host
+> and an `acquirer` client over a real switch, plus a `simulator` test host built
+> from `runtime.Host` supervising an ISO-8583 listener and an ops admin endpoint
+> (`/healthz`, `/readyz`, `/metrics`) with metrics wired through
+> `runtime.Observer`. The shared `examples/posdemo` carries an end-to-end
+> loopback test (approve/decline/concurrent correlation); the binaries were
+> smoke-tested. README rewritten as the entry point; `docs/getting-started.md`
+> and `docs/versioning.md` (SemVer policy) added; `CHANGELOG.md` records v0.1.0.
+> The `v0.1.0` annotated tag is created locally and left **unpushed**.
+
+---
+
+## Project status
+
+**🟢 v0.1.0 feature-complete.** All 13 phases (0–12) are done: 21 importable
+packages plus examples, every one `gofmt`/`go vet` clean and green under `go
+test -race`, and the module is **stdlib-only** (no third-party dependency in the
+graph; optional OTel / NATS / SQL / HSM integrations are drop-in adapters). The
+`v0.1.0` tag is local and unpushed — publishing the release (push + GitHub
+release) is the maintainer's to run.
 
 ---
 
