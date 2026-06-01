@@ -87,6 +87,40 @@ func TestPINBlockErrors(t *testing.T) {
 	}
 }
 
+func TestPINBlockPaddingValidation(t *testing.T) {
+	pan := "4012345678909"
+	// A clear ISO-0 block with valid control/length/digits but a non-F pad
+	// nibble must be rejected (decode XORs the PAN field back in, so craft the
+	// clear block then XOR the PAN field to get the input).
+	clear := unpackNibbles(make([]byte, 8))
+	clear[0] = 0x0 // ISO-0 control
+	clear[1] = 0x4 // length 4
+	clear[2], clear[3], clear[4], clear[5] = 1, 2, 3, 4
+	for i := 6; i < 16; i++ {
+		clear[i] = 0xF
+	}
+	clear[15] = 0x3 // corrupt one pad nibble (not F)
+	af, _ := panField(pan)
+	bad := xored(packNibbles(clear), af)
+	if _, err := DecodePINBlock(ISO0, bad, pan); err == nil {
+		t.Error("ISO-0 block with non-F padding was accepted")
+	}
+
+	// ISO-3 must reject a decimal (0-9) pad nibble.
+	clear3 := unpackNibbles(make([]byte, 8))
+	clear3[0] = 0x3
+	clear3[1] = 0x4
+	clear3[2], clear3[3], clear3[4], clear3[5] = 5, 6, 7, 8
+	for i := 6; i < 16; i++ {
+		clear3[i] = 0xC // valid A-F
+	}
+	clear3[10] = 0x2 // decimal pad → invalid for ISO-3
+	bad3 := xored(packNibbles(clear3), af)
+	if _, err := DecodePINBlock(ISO3, bad3, pan); err == nil {
+		t.Error("ISO-3 block with decimal padding was accepted")
+	}
+}
+
 func TestMACRoundTripAndVerify(t *testing.T) {
 	data := []byte("0200ISO8583 MAC TEST DATA BLOCK")
 	for _, alg := range []struct {
