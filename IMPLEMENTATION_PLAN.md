@@ -292,7 +292,7 @@ The dependency-free heart. Built in slices so each compiles and tests green.
 
 | Status | Task | File |
 |:------:|------|------|
-| 🟢 | `Vault` crypto façade + `SoftVault` software backend | `vault.go` |
+| 🟢 | `Vault` crypto façade + `SoftVault` + hardened `SealedVault` | `vault.go`, `sealed.go` |
 | 🟢 | PIN block formats (ISO 9564 0/1/3) + encrypt/translate + pad validation | `pinblock.go`, `cipher.go` |
 | 🟢 | MAC generation/verification (ISO 9797-1 alg 1 & 3) + CMAC | `mac.go`, `cmac.go` |
 | 🟢 | Key management + TR-31 version B key blocks (wrap/unwrap) | `keyblock.go` |
@@ -310,11 +310,19 @@ The dependency-free heart. Built in slices so each compiles and tests green.
 > detection); EMV Common Session Key + ARQC/ARPC. `SoftVault` holds keys in
 > memory; `go test -race` green; zero third-party deps.
 >
-> **SECURITY / dependency notes:** SoftVault is for development, testing, and
-> conformance only — production PIN and key handling must use a certified **HSM,
-> which is a drop-in `Vault` adapter (e.g. PKCS#11 via cgo) in a separate
-> optional module**, so the core stays stdlib-only (the `miekg/crypto11` route
-> would be that adapter, not a core dependency). AES successors (ISO 9564 format
+> Two software backends implement the `Vault` interface: `SoftVault` (keys in
+> memory, for tests) and **`SealedVault`** — hardened: working keys are encrypted
+> at rest under a caller-supplied KEK (AES-GCM), decrypted only transiently and
+> zeroized after each operation (including the cleartext PIN block), with key
+> check values, per-key usage enforcement, and an audit hook.
+>
+> **SECURITY / dependency notes:** the software backends — even `SealedVault` —
+> are for development, testing, and non-PIN crypto; **production PIN and key
+> handling must use a certified HSM**, a drop-in `Vault` adapter (e.g. PKCS#11
+> via cgo) in a separate optional module, so the core stays stdlib-only (the
+> `miekg/crypto11` route would be that adapter, not a core dependency). PCI PIN
+> Security / P2PE require a tamper-responsive Secure Cryptographic Device that
+> software on a general-purpose host cannot be. AES successors (ISO 9564 format
 > 4, TR-31 version D) are noted as future. TR-31 wrap/unwrap is self-consistent
 > and tamper-evident; external-vector interop validation is pending a published
 > version-B vector.

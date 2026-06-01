@@ -7,7 +7,19 @@ All notable changes to Isopace are recorded here. The format is based on
 
 ## [Unreleased]
 
-_Nothing yet._
+### Added
+
+- **`vault.SealedVault`** — a hardened software `Vault`: working keys are
+  encrypted at rest under a caller-supplied key-encryption key (AES-GCM),
+  decrypted only transiently and zeroized after each operation (including the
+  cleartext PIN block), with key check values, per-key usage enforcement, and an
+  audit hook. It implements the same `Vault` interface as `SoftVault`. It raises
+  the bar for software key storage and non-PIN crypto but is still **not** a
+  certified HSM substitute for PCI PIN / P2PE.
+- **`COMMERCIAL-AGREEMENT.md`** — a draft commercial-license template (pending
+  legal-counsel review).
+- **`.air.toml`** — live-reload config for the `simulator` example (dev tool;
+  not a module dependency).
 
 ## [0.1.0] - 2026-06-01
 
