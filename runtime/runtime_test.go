@@ -23,6 +23,7 @@ import (
 	"runtime"
 	"slices"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -52,6 +53,7 @@ type recorder struct {
 	name     string
 	log      *eventLog
 	startErr error
+	stopErr  error
 	v        int
 }
 
@@ -67,7 +69,7 @@ func (r *recorder) Start(context.Context) error {
 
 func (r *recorder) Stop(context.Context) error {
 	r.log.add(r.name + ":stop")
-	return nil
+	return r.stopErr
 }
 
 func testHost(t *testing.T, log *eventLog) *rt.Host {
@@ -114,6 +116,96 @@ func TestHostStartUnwindsOnFailure(t *testing.T) {
 	want := []string{"a:start", "a:stop"}
 	if !slices.Equal(got, want) {
 		t.Errorf("unwind events = %v want %v", got, want)
+	}
+}
+
+func TestHostStartUnwindReportsStopErrors(t *testing.T) {
+	log := &eventLog{}
+	h := testHost(t, log)
+	startBoom := errors.New("start boom")
+	stopFail := errors.New("stop fail")
+	_ = h.Register(&recorder{name: "a", log: log, stopErr: stopFail})
+	_ = h.Register(&recorder{name: "b", log: log, startErr: startBoom})
+
+	err := h.Start(context.Background())
+	if !errors.Is(err, startBoom) {
+		t.Errorf("Start err missing start cause: %v", err)
+	}
+	if !errors.Is(err, stopFail) {
+		t.Errorf("Start err missing unwind stop error: %v", err)
+	}
+}
+
+func TestDeployerKeepsOldOnFailedRebuild(t *testing.T) {
+	log := &eventLog{}
+	h := testHost(t, log)
+	_ = h.Start(context.Background())
+	defer h.Stop(context.Background())
+
+	var builds atomic.Int32
+	reg := rt.NewRegistry()
+	reg.Register("rec", func(name string, _ json.RawMessage, _ *rt.Env) (rt.Component, error) {
+		if builds.Add(1) > 1 {
+			return nil, errors.New("bad config") // every rebuild fails
+		}
+		return &recorder{name: name, log: log}, nil
+	})
+
+	dir := t.TempDir()
+	desc := filepath.Join(dir, "a.json")
+	if err := os.WriteFile(desc, []byte(`{"name":"svc","type":"rec","enabled":true,"config":{"v":1}}`), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	dp := rt.NewDeployer(h, reg, dir)
+	if err := dp.Scan(context.Background()); err != nil {
+		t.Fatalf("Scan(1): %v", err)
+	}
+	if !slices.Contains(h.Components(), "svc") {
+		t.Fatal("svc not deployed")
+	}
+
+	// Change the descriptor; the rebuild will fail. The running component must
+	// stay up rather than be torn down for a replacement that never builds.
+	if err := os.WriteFile(desc, []byte(`{"name":"svc","type":"rec","enabled":true,"config":{"v":2}}`), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := dp.Scan(context.Background()); err == nil {
+		t.Error("Scan should report the rebuild failure")
+	}
+	if !slices.Contains(h.Components(), "svc") {
+		t.Error("old component torn down despite failed rebuild")
+	}
+	if slices.Contains(log.snapshot(), "svc:stop") {
+		t.Errorf("old component stopped on failed rebuild: %v", log.snapshot())
+	}
+}
+
+func TestConfigEnvOverrideSkipsScalarCollision(t *testing.T) {
+	// "server" is a scalar; an override implying server.port must not clobber it.
+	c, err := rt.Parse([]byte(`{"server":"plain"}`),
+		rt.WithEnvPrefix("ISO"), rt.WithEnviron([]string{"ISO_SERVER_PORT=8080"}))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := c.String("server", ""); got != "plain" {
+		t.Errorf("server = %q want plain (scalar preserved)", got)
+	}
+	if _, ok := c.Get("server.port"); ok {
+		t.Errorf("override clobbered scalar into a map")
+	}
+}
+
+func TestConfigDurationOverflow(t *testing.T) {
+	c, err := rt.Parse([]byte(`{"t": 1e19}`)) // *1e9 overflows int64
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := c.Duration("t", 7*time.Second); got != 7*time.Second {
+		t.Errorf("Duration overflow = %v want default 7s", got)
+	}
+	c2, _ := rt.Parse([]byte(`{"t": 5}`)) // sane: seconds
+	if got := c2.Duration("t", 0); got != 5*time.Second {
+		t.Errorf("Duration(5) = %v want 5s", got)
 	}
 }
 

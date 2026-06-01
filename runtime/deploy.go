@@ -220,26 +220,40 @@ func (d *Deployer) applyOne(ctx context.Context, path string, raw []byte, prev d
 		return fmt.Errorf("runtime: descriptor %s has no name", filepath.Base(path))
 	}
 
-	// Tear down the previous incarnation before standing up the new one.
-	if had {
-		if err := d.host.Undeploy(ctx, prev.name); err != nil && !errors.Is(err, ErrNotFound) {
-			return fmt.Errorf("runtime: replace %q: %w", prev.name, err)
-		}
-		delete(d.applied, path)
-	}
-
+	// A disabled descriptor runs nothing; tear down any previous incarnation.
 	if !desc.Enabled {
-		return nil // recorded as absent; a disabled descriptor deploys nothing
+		if had {
+			return d.teardown(ctx, path, prev)
+		}
+		return nil
 	}
 
+	// Build the new component BEFORE tearing down the old one, so a descriptor
+	// that no longer builds (e.g. bad config) leaves the running component in
+	// place rather than downing it for a replacement that never materialises.
 	c, err := d.reg.Build(desc, d.host.Env())
 	if err != nil {
 		return err
+	}
+	if had {
+		if err := d.teardown(ctx, path, prev); err != nil {
+			return err
+		}
 	}
 	if err := d.host.Deploy(ctx, c); err != nil {
 		return err
 	}
 	d.applied[path] = deployState{name: desc.Name, raw: raw}
+	return nil
+}
+
+// teardown undeploys a previously-applied descriptor and forgets it. Caller
+// holds mu.
+func (d *Deployer) teardown(ctx context.Context, path string, prev deployState) error {
+	if err := d.host.Undeploy(ctx, prev.name); err != nil && !errors.Is(err, ErrNotFound) {
+		return fmt.Errorf("runtime: replace %q: %w", prev.name, err)
+	}
+	delete(d.applied, path)
 	return nil
 }
 

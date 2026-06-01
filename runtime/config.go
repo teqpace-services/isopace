@@ -15,6 +15,7 @@ package runtime
 import (
 	"encoding/json"
 	"fmt"
+	"math"
 	"os"
 	"strconv"
 	"strings"
@@ -49,7 +50,9 @@ type LoadOption func(*loadCfg)
 // WithEnvPrefix enables environment overrides: a variable PREFIX_A_B becomes the
 // config path "a.b". The value is parsed as JSON when possible (so "5" is a
 // number and "true" a bool), otherwise kept as a string. An empty prefix (the
-// default) disables overrides.
+// default) disables overrides. An override whose path would have to traverse
+// through a non-map scalar already declared in the file is skipped, so a
+// malformed deeper override never silently destroys declared config.
 func WithEnvPrefix(prefix string) LoadOption { return func(c *loadCfg) { c.prefix = prefix } }
 
 // WithEnviron supplies the environment to read overrides from, in os.Environ
@@ -137,10 +140,19 @@ func setPath(tree map[string]any, segs []string, val any) {
 			m[s] = val
 			return
 		}
-		child, ok := m[s].(map[string]any)
-		if !ok {
-			child = map[string]any{}
+		existing, present := m[s]
+		if !present {
+			child := map[string]any{}
 			m[s] = child
+			m = child
+			continue
+		}
+		child, ok := existing.(map[string]any)
+		if !ok {
+			// An intermediate path element is a non-map scalar declared in the
+			// file. Applying this override would silently destroy it, so skip
+			// the override and keep the declared value rather than clobber it.
+			return
 		}
 		m = child
 	}
@@ -225,7 +237,11 @@ func (c *Config) Duration(path string, def time.Duration) time.Duration {
 			return pd
 		}
 	case float64:
-		return time.Duration(d * float64(time.Second))
+		ns := d * float64(time.Second)
+		if math.IsNaN(ns) || math.IsInf(ns, 0) || ns > math.MaxInt64 || ns < math.MinInt64 {
+			return def // out of representable Duration range
+		}
+		return time.Duration(ns)
 	}
 	return def
 }
