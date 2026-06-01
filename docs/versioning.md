@@ -35,6 +35,8 @@ packages (`iso8583`, `fieldcodec`, `lengthcodec`, `packager`, `render/*`, `link`
 It does **not** cover:
 
 - packages under `internal/` (not importable);
+- the `conformance` package (tests, golden vectors, and benchmarks only — no
+  shipped runtime API);
 - the `examples/` programs (illustrative, not API);
 - on-the-wire encodings beyond what a profile documents, log output, error
   message text, or unexported behaviour;
