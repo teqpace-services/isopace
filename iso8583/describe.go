@@ -63,6 +63,7 @@ var sensitiveTag = map[string]maskKind{
 type describeConfig struct {
 	unmask bool   // show sensitive fields in full
 	raw    bool   // append a raw-hex column
+	color  bool   // ANSI colour the output
 	title  string // header title override ("" = default)
 }
 
@@ -81,6 +82,29 @@ func WithRaw() DescribeOption { return func(c *describeConfig) { c.raw = true } 
 
 // WithTitle overrides the header title line (default "ISO 8583 message").
 func WithTitle(s string) DescribeOption { return func(c *describeConfig) { c.title = s } }
+
+// WithColor renders the dump with ANSI colour: a bold title, cyan DE keys, dim
+// structural labels, and green field values. Off by default so piped output
+// stays clean; enable it for a terminal.
+func WithColor() DescribeOption { return func(c *describeConfig) { c.color = true } }
+
+// ANSI styles used when WithColor is set.
+const (
+	ansiReset = "\x1b[0m"
+	ansiBold  = "\x1b[1m"
+	ansiDim   = "\x1b[2m"
+	ansiCyan  = "\x1b[36m"
+	ansiGreen = "\x1b[32m"
+)
+
+// paint wraps s in code when colour is enabled (the padding stays outside, since
+// callers pad the visible text before painting to preserve column alignment).
+func (c *describeConfig) paint(code, s string) string {
+	if !c.color {
+		return s
+	}
+	return code + s + ansiReset
+}
 
 func resolve(opts []DescribeOption) describeConfig {
 	c := describeConfig{title: "ISO 8583 message"}
@@ -118,20 +142,22 @@ func Describe(w io.Writer, v View, opts ...DescribeOption) error {
 
 	bw := newErrWriter(w)
 	bm := v.Bitmap()
-	fmt.Fprintf(bw, "%s · profile %s\n", cfg.title, schemaID(v))
+	fmt.Fprintf(bw, "%s · profile %s\n", cfg.paint(ansiBold, cfg.title), cfg.paint(ansiDim, schemaID(v)))
 	if mti, ok := v.Get(0); ok {
 		if s, err := mti.String(); err == nil {
-			fmt.Fprintf(bw, "  MTI     : %s\n", s)
+			fmt.Fprintf(bw, "  MTI     : %s\n", cfg.paint(ansiBold, s))
 		}
 	}
-	fmt.Fprintf(bw, "  bitmap  : %s  (%d field(s) · %s)\n", bitmapHex(bm), bm.Count(), bm)
-	fmt.Fprintf(bw, "  %s\n", strings.Repeat("─", keyW+nameW+6))
+	fmt.Fprintf(bw, "  bitmap  : %s  %s\n", bitmapHex(bm), cfg.paint(ansiDim, fmt.Sprintf("(%d field(s) · %s)", bm.Count(), bm)))
+	fmt.Fprintf(bw, "  %s\n", cfg.paint(ansiDim, strings.Repeat("─", keyW+nameW+6)))
 	for _, r := range rows {
 		name := strings.Repeat("  ", r.depth) + r.name
 		name = truncate(name, nameW)
-		fmt.Fprintf(bw, "  %-*s  %-*s = %s", keyW, r.key, nameW, name, r.value)
+		// Pad the visible text first, then colour, so columns stay aligned.
+		key := cfg.paint(ansiCyan, fmt.Sprintf("%-*s", keyW, r.key))
+		fmt.Fprintf(bw, "  %s  %-*s = %s", key, nameW, name, cfg.paint(ansiGreen, r.value))
 		if cfg.raw && r.raw != "" {
-			fmt.Fprintf(bw, "  raw=%s", r.raw)
+			fmt.Fprintf(bw, "  raw=%s", cfg.paint(ansiDim, r.raw))
 		}
 		fmt.Fprintln(bw)
 	}

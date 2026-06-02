@@ -170,7 +170,7 @@ func (t *Trace) WriteTo(w io.Writer, opts ...Option) {
 		case kindError:
 			fmt.Fprintf(w, "%s%s  %s\n", cfg.stamp(e.when), cfg.paint(ansiRed, "error"), cfg.paint(ansiRed, e.err.Error()))
 		default:
-			line := cfg.stamp(e.when) + cfg.paint(ansiCyan, fmt.Sprintf("%-14s", e.label))
+			line := cfg.stamp(e.when) + cfg.paint(labelColor(e.label), fmt.Sprintf("%-14s", e.label))
 			if e.detail != "" {
 				line += "  " + e.detail
 			}
@@ -179,16 +179,14 @@ func (t *Trace) WriteTo(w io.Writer, opts ...Option) {
 	}
 }
 
-// message renders a self-contained, titled message block (its title bold when
-// colour is on); no extra indentation.
+// message renders a self-contained, titled message block (coloured by the
+// iso8583 renderer when colour is on); no extra indentation.
 func (c renderConfig) message(e entry) string {
-	dump := iso8583.Dump(e.msg, append(e.msgTitle(), c.msgOpts...)...)
+	opts := append(e.msgTitle(), c.msgOpts...)
 	if c.color {
-		if i := strings.IndexByte(dump, '\n'); i > 0 {
-			dump = ansiBold + dump[:i] + ansiReset + dump[i:]
-		}
+		opts = append(opts, iso8583.WithColor())
 	}
-	return dump
+	return iso8583.Dump(e.msg, opts...)
 }
 
 // stamp renders the timestamp prefix (dim, with trailing spaces) or "" when off.
@@ -205,8 +203,20 @@ const (
 	ansiBold  = "\x1b[1m"
 	ansiDim   = "\x1b[2m"
 	ansiRed   = "\x1b[31m"
+	ansiGreen = "\x1b[32m"
 	ansiCyan  = "\x1b[36m"
 )
+
+// labelColor picks a colour by step: the open/close of the cycle stand out in
+// green, everything else is cyan.
+func labelColor(label string) string {
+	switch label {
+	case "received", "replied":
+		return ansiGreen
+	default:
+		return ansiCyan
+	}
+}
 
 // paint wraps s in an ANSI code when colour is enabled.
 func (c renderConfig) paint(code, s string) string {
