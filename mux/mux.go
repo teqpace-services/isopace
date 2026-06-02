@@ -162,10 +162,19 @@ func (m *Mux) deliverUnsolicited(msg []byte) {
 	}
 }
 
-func (m *Mux) fail(err error) {
-	m.readErr.Store(errBox{err})
-	m.closeOnce.Do(func() { close(m.done) })
+// stop closes the mux once, recording cause for Err. The first caller wins, so a
+// clean Close reports ErrClosed while a read-loop failure reports its real cause
+// even if Close races in just behind it.
+func (m *Mux) stop(cause error) {
+	m.closeOnce.Do(func() {
+		if cause != nil {
+			m.readErr.Store(errBox{cause})
+		}
+		close(m.done)
+	})
 }
+
+func (m *Mux) fail(err error) { m.stop(err) }
 
 func (m *Mux) closedErr() error {
 	if v, ok := m.readErr.Load().(errBox); ok {
@@ -176,9 +185,25 @@ func (m *Mux) closedErr() error {
 
 type errBox struct{ err error }
 
+// Done returns a channel closed when the mux stops — because Close was called or
+// the underlying link's read loop failed. A supervisor (e.g. a reconnecting
+// connector) selects on it to learn the link died without issuing a request.
+func (m *Mux) Done() <-chan struct{} { return m.done }
+
+// Err returns the cause once Done is closed: the read-loop error that downed the
+// link, or ErrClosed if it was closed cleanly. It returns nil while still live.
+func (m *Mux) Err() error {
+	select {
+	case <-m.done:
+		return m.closedErr()
+	default:
+		return nil
+	}
+}
+
 // Close stops the read loop, closes the link, and unblocks pending requests.
 func (m *Mux) Close() error {
-	m.closeOnce.Do(func() { close(m.done) })
+	m.stop(ErrClosed)
 	err := m.link.Close()
 	m.wg.Wait()
 	return err

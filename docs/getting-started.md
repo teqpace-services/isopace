@@ -48,6 +48,36 @@ curl http://127.0.0.1:8584/readyz    # readiness (health checks)
 curl http://127.0.0.1:8584/metrics   # Prometheus exposition
 ```
 
+### teq — the container, assembled
+
+`teq` is the Isopace container (the jPOS Q2 analog) packaged for easy startup. It
+wraps `runtime.Host` and adds first-class **switch connections**: each `Switch`
+is a self-healing `connector.Connector` the host supervises, so links to upstream
+switches (Interswitch, UP, …) are dialled, kept alive, and reconnected on their
+own. Starting from code is a few lines:
+
+```go
+q := teq.New()
+isw, _ := q.Switch(connector.Config{Name: "isw", Addr: "isw.example:5000", Keyer: keyer})
+up,  _ := q.Switch(connector.Config{Name: "up",  Addr: "up.example:6000",  Keyer: keyer})
+q.Start(ctx)                                   // connectors dial in the background
+resp, _ := q.To("isw").Request(ctx, frame)     // route by name; auto-reconnects
+q.ListenAndServe()                             // or run as a daemon until SIGINT/SIGTERM
+```
+
+The `teq` example stands up two issuers as upstream switches and routes
+transactions to each by name:
+
+```sh
+go run ./examples/teq
+```
+
+`connector.Config` exposes hooks for the switch-specific bits: `OnConnect` for
+sign-on / key exchange after each (re)connect, and `Keepalive` for a periodic
+echo (0800) that holds the link open and detects a dead peer. The underlying
+`link` options carry the framer (e.g. a Postilion 2-byte length prefix), TLS, and
+MAC filters.
+
 ### Component host
 
 The `runtimehost` demo drives `runtime.Host` — the component container (the
