@@ -7,7 +7,23 @@ All notable changes to Isopace are recorded here. The format is based on
 
 ## [Unreleased]
 
-_Nothing yet._
+### Added
+
+- **`packager.Postilion()`** — an ISO 8583:1987 profile for Postilion-style
+  switch links (e.g. agency/Interswitch acquirers): ASCII MTI, a **binary**
+  primary+secondary bitmap, ASCII fixed and LL/LLL variable fields, and a DE 127
+  reserved-private subfield group carried under a 6-digit length prefix over a
+  binary sub-bitmap. Registered in `Profiles()` as `"postilion"`. Validated
+  end-to-end against a live host (0800 sign-on → 0810, 0200 → 0210). A
+  clean-room composition from public ISO 8583:1987 field semantics.
+
+### Removed
+
+- **`packager.Switch()`, `packager.Fields()`, `packager.Zone()`** and their
+  embedded `schemadef/{switch,fields,zone}.json` — the representative "site"
+  layouts, superseded by the validated `Postilion()` profile. **Breaking:**
+  code referencing those constructors or the `"switch"` / `"fields"` / `"zone"`
+  profile ids must move to `Postilion()` / `"postilion"`.
 
 ## [0.1.0] - 2026-06-01
 
