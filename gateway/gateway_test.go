@@ -17,6 +17,7 @@ import (
 	"errors"
 	"io"
 	"log/slog"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -26,6 +27,7 @@ import (
 	"github.com/teqpace-services/isopace/link"
 	"github.com/teqpace-services/isopace/mux"
 	"github.com/teqpace-services/isopace/packager"
+	"github.com/teqpace-services/isopace/trace"
 )
 
 var codec = iso8583.NewCodec(packager.ISO87A())
@@ -68,6 +70,9 @@ func (h *fakeHost) received() *iso8583.Message {
 	defer h.mu.Unlock()
 	return h.lastReq
 }
+
+// Name lets the gateway record a friendly destination in the trace.
+func (h *fakeHost) Name() string { return "host" }
 
 func quietLog() *slog.Logger { return slog.New(slog.NewTextHandler(io.Discard, nil)) }
 
@@ -256,6 +261,54 @@ func TestGatewayForwardError(t *testing.T) {
 	}
 	if rc, _ := iso8583.Get[string](decode(t, resp), 39); rc != "91" {
 		t.Errorf("rc = %q want 91 (forward-error decline)", rc)
+	}
+}
+
+// TestGatewayTrace: every handled message yields a trace describing the whole
+// lifecycle, and hooks annotate the same trace via the context.
+func TestGatewayTrace(t *testing.T) {
+	host := &fakeHost{}
+	var mu sync.Mutex
+	var traces []*trace.Trace
+	g := startGateway(t, gateway.Config{
+		Name:  "pos",
+		Route: func(context.Context, *iso8583.Message) (gateway.Forwarder, error) { return host, nil },
+		BeforeRequest: func(ctx context.Context, req *iso8583.Message) (*iso8583.Message, error) {
+			trace.From(ctx).Step("fee applied", "amount", 100)
+			return req, nil
+		},
+		Trace: func(tr *trace.Trace) {
+			mu.Lock()
+			traces = append(traces, tr)
+			mu.Unlock()
+		},
+	})
+	cl := dialClient(t, g.Addr())
+	if _, err := cl.Request(context.Background(), authReq(t, 1, 100_00)); err != nil {
+		t.Fatalf("Request: %v", err)
+	}
+
+	// The trace is emitted in a deferred call after the reply is sent, so poll.
+	var out string
+	for i := 0; i < 200; i++ {
+		mu.Lock()
+		n := len(traces)
+		if n > 0 {
+			out = traces[0].Describe()
+		}
+		mu.Unlock()
+		if n > 0 {
+			break
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
+	if out == "" {
+		t.Fatal("no trace captured")
+	}
+	for _, want := range []string{"received", "request:", "route", "dest=host", "fee applied", "response:", "replied", "0200", "0210"} {
+		if !strings.Contains(out, want) {
+			t.Errorf("trace missing %q\n%s", want, out)
+		}
 	}
 }
 
