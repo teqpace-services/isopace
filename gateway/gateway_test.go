@@ -154,22 +154,22 @@ func TestGatewayRoutesAndForwards(t *testing.T) {
 	}
 }
 
-// TestGatewayTransformsRequestAndResponse: BeforeForward edits the outbound
-// request (the host sees it) and AfterForward edits the response (the client
+// TestGatewayTransformsRequestAndResponse: BeforeRequest edits the outbound
+// request (the host sees it) and BeforeResponse edits the response (the client
 // sees it).
 func TestGatewayTransformsRequestAndResponse(t *testing.T) {
 	host := &fakeHost{}
 	g := startGateway(t, gateway.Config{
 		Name:  "pos",
 		Route: func(context.Context, *iso8583.Message) (gateway.Forwarder, error) { return host, nil },
-		BeforeForward: func(_ context.Context, req *iso8583.Message) (*iso8583.Message, error) {
+		BeforeRequest: func(_ context.Context, req *iso8583.Message) (*iso8583.Message, error) {
 			// Stamp the acquiring institution id before forwarding.
 			if err := req.Set(32, int64(99001)); err != nil {
 				return nil, err
 			}
 			return req, nil
 		},
-		AfterForward: func(_ context.Context, _, resp *iso8583.Message) (*iso8583.Message, error) {
+		BeforeResponse: func(_ context.Context, _, resp *iso8583.Message) (*iso8583.Message, error) {
 			// Stamp a gateway marker on the response.
 			if err := resp.Set(48, "ROUTED-VIA-TEQ"); err != nil {
 				return nil, err
