@@ -184,6 +184,21 @@ func TestLogValuerUnmasked(t *testing.T) {
 	}
 }
 
+func TestDescribeColor(t *testing.T) {
+	m := authMsg(t)
+	if strings.Contains(Dump(m), "\x1b[") {
+		t.Error("default Dump should emit no ANSI codes")
+	}
+	colored := Dump(m, WithColor())
+	if !strings.Contains(colored, "\x1b[") {
+		t.Error("WithColor should emit ANSI codes")
+	}
+	// Colour must not defeat masking.
+	if strings.Contains(colored, "4111111111111111") {
+		t.Errorf("coloured dump leaked the full PAN:\n%s", colored)
+	}
+}
+
 func mustSet(t *testing.T, m *Message, de int, v any) {
 	t.Helper()
 	if err := m.Set(de, v); err != nil {
