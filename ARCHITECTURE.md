@@ -900,20 +900,21 @@ fields:
 schema, err := generic.LoadFile("schemadef/iso87b.yaml", fieldcodec.DefaultRegistry())
 ```
 
-### 7.5 Concrete site packagers (`zone`, `fields`, `switch`)
+### 7.5 Concrete site packager (`postilion`)
 
 Unlike the representation-independent `iso87`/`iso93` directories (which swap whole
 codec sets via a `rep`), a deployment often pins each field to one concrete codec
-and length discipline. Three such site packagers ship in the catalog: `zone` (a
-full ISO 8583:1987 directory, binary bitmap) and `fields`/`switch` (a sparse
-switch dialect, ASCII-hex bitmap). Each is just a table of
-`(DE, name, value, length, max)` rows over the two orthogonal axes, emitted both
-ways from one description: as a programmatic `*Schema` (`packager.Zone()`,
-`Fields()`, `Switch()`) and as editable JSON in `schemadef/{zone,fields,switch}.json`,
-generated from the same table so the two cannot drift. Their **DE 127** is a
-nested subfield group — a headerless sub-bitmap plus positional subfields wired
-with the `subfield.iso` composite codec — so `127.2`, `127.22`, … are addressable
-under the uniform path grammar, just like `55.9F26`.
+and length discipline. `packager.Postilion()` is such a site profile: an ISO
+8583:1987 Postilion layout (ASCII MTI, **binary** primary+secondary bitmap, ASCII
+fixed and LL/LLL variable fields) — a table of `(DE, name, value, length, max)`
+rows over the two orthogonal axes. Its **DE 127** is a nested reserved-private
+subfield group — a headerless **binary** sub-bitmap plus positional subfields
+under a 6-digit length prefix, wired with the `subfield` composite codec — so
+`127.2`, `127.22`, … are addressable under the uniform path grammar, just like
+`55.9F26`. The profile was validated end-to-end against a live switch (a `0800`
+sign-on answered `0810`, and a `0200` cashout answered `0210`); on the wire such
+links use a 2-byte length prefix and a network sign-on, both handled by the
+`link` layer rather than the schema.
 
 ---
 
