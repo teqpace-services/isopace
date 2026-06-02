@@ -1,0 +1,12 @@
+{
+  "name": "pos",
+  "type": "gateway",
+  "enabled": true,
+  "config": {
+    "addr": "127.0.0.1:9000",
+    "packager": "iso87-a",
+    "framer": "length2",
+    "route_to": "isw",
+    "timeout_ms": 30000
+  }
+}
