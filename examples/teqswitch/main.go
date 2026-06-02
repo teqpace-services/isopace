@@ -78,14 +78,14 @@ func run() error {
 			}
 			return nil, gateway.ErrNoRoute
 		},
-		BeforeForward: func(_ context.Context, req *iso8583.Message) (*iso8583.Message, error) {
+		BeforeRequest: func(_ context.Context, req *iso8583.Message) (*iso8583.Message, error) {
 			amt, _ := iso8583.Get[int64](req, 4)
 			_ = req.Set(4, amt+feeMinor)  // add a switch fee
 			_ = req.Set(32, int64(99001)) // stamp the acquiring institution id
 			fmt.Printf("   [gateway] +%d fee (%d->%d) + acquirer id, forwarding\n", feeMinor, amt, amt+feeMinor)
 			return req, nil
 		},
-		AfterForward: func(_ context.Context, _, resp *iso8583.Message) (*iso8583.Message, error) {
+		BeforeResponse: func(_ context.Context, _, resp *iso8583.Message) (*iso8583.Message, error) {
 			_ = resp.Set(48, "ROUTED-VIA-TEQ") // stamp the response
 			return resp, nil
 		},

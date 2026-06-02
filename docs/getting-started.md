@@ -120,10 +120,10 @@ q.Gateway(gateway.Config{
     Route: func(_ context.Context, req *iso8583.Message) (gateway.Forwarder, error) {
         return q.To("isw"), nil               // pick the destination switch
     },
-    BeforeForward: func(_ context.Context, req *iso8583.Message) (*iso8583.Message, error) {
+    BeforeRequest: func(_ context.Context, req *iso8583.Message) (*iso8583.Message, error) {
         _ = req.Set(32, acquirerID); return req, nil   // edit before forwarding
     },
-    AfterForward: func(_ context.Context, _, resp *iso8583.Message) (*iso8583.Message, error) {
+    BeforeResponse: func(_ context.Context, _, resp *iso8583.Message) (*iso8583.Message, error) {
         _ = resp.Set(48, "ROUTED-VIA-TEQ"); return resp, nil  // edit the reply
     },
     OnError: declineOnError,                   // build a decline if routing fails

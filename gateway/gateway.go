@@ -18,8 +18,8 @@
 // connector.Connector (outbound).
 //
 // Per message the gateway: decodes the inbound frame, calls [Config.Route] to
-// pick the destination [Forwarder], runs [Config.BeforeForward] to edit the
-// request, forwards via the destination, runs [Config.AfterForward] to edit the
+// pick the destination [Forwarder], runs [Config.BeforeRequest] to edit the
+// request, forwards via the destination, runs [Config.BeforeResponse] to edit the
 // response, and sends it back. Messages on one link are handled concurrently, so
 // responses return as soon as the upstream answers. A Gateway satisfies the
 // runtime.Component contract (Name/Start/Stop) so a host can supervise it.
@@ -55,7 +55,7 @@ type Config struct {
 	Addr    string
 	// Codec decodes inbound frames and encodes outbound ones. It is the profile
 	// the inbound peers speak; a destination on a different profile is the
-	// caller's concern inside BeforeForward (re-encode) or a per-route codec.
+	// caller's concern inside BeforeRequest (re-encode) or a per-route codec.
 	Codec *iso8583.Codec
 	// LinkOptions configure accepted connections: framer, TLS, MAC filters.
 	LinkOptions []link.Option
@@ -63,13 +63,13 @@ type Config struct {
 	// Route picks the upstream for a decoded inbound request. Returning a nil
 	// Forwarder (or ErrNoRoute) sends the request down the OnError path.
 	Route func(ctx context.Context, req *iso8583.Message) (Forwarder, error)
-	// BeforeForward may edit the request before it is forwarded. It receives a
+	// BeforeRequest may edit the request before it is forwarded. It receives a
 	// mutable clone of the inbound message; return the message to send (returning
 	// nil forwards the clone unchanged). Optional.
-	BeforeForward func(ctx context.Context, req *iso8583.Message) (*iso8583.Message, error)
-	// AfterForward may edit the response before it is returned to the client. It
+	BeforeRequest func(ctx context.Context, req *iso8583.Message) (*iso8583.Message, error)
+	// BeforeResponse may edit the response before it is returned to the client. It
 	// receives the original inbound request and the upstream response. Optional.
-	AfterForward func(ctx context.Context, req, resp *iso8583.Message) (*iso8583.Message, error)
+	BeforeResponse func(ctx context.Context, req, resp *iso8583.Message) (*iso8583.Message, error)
 	// OnError builds the reply when routing or forwarding fails (e.g. a 0210 with
 	// response code 91). If nil, the inbound message is dropped with no reply.
 	OnError func(ctx context.Context, req *iso8583.Message, cause error) (*iso8583.Message, error)
@@ -206,10 +206,10 @@ func (g *Gateway) process(ctx context.Context, req *iso8583.Message) (*iso8583.M
 	}
 
 	out := req
-	if g.cfg.BeforeForward != nil {
-		edited, err := g.cfg.BeforeForward(ctx, req.Clone())
+	if g.cfg.BeforeRequest != nil {
+		edited, err := g.cfg.BeforeRequest(ctx, req.Clone())
 		if err != nil {
-			return nil, fmt.Errorf("before-forward: %w", err)
+			return nil, fmt.Errorf("before-request: %w", err)
 		}
 		if edited != nil {
 			out = edited
@@ -229,10 +229,10 @@ func (g *Gateway) process(ctx context.Context, req *iso8583.Message) (*iso8583.M
 		return nil, fmt.Errorf("decode upstream response: %w", err)
 	}
 
-	if g.cfg.AfterForward != nil {
-		edited, err := g.cfg.AfterForward(ctx, req, resp)
+	if g.cfg.BeforeResponse != nil {
+		edited, err := g.cfg.BeforeResponse(ctx, req, resp)
 		if err != nil {
-			return nil, fmt.Errorf("after-forward: %w", err)
+			return nil, fmt.Errorf("before-response: %w", err)
 		}
 		if edited != nil {
 			resp = edited
