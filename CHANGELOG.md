@@ -7,8 +7,45 @@ All notable changes to Isopace are recorded here. The format is based on
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-06-02
+
+The switching-layer release: a jPOS Q2-style container (`teq`) that keeps switch
+connections open, routes and transforms transactions, and traces each one — plus
+XML rendering and a built-in message describer. Still **stdlib-only**; every
+package is `gofmt`/`go vet` clean and tested under `go test -race`.
+
 ### Added
 
+- **`teq` + `cmd/teq` — the container (jPOS Q2 analog), assembled.** Wraps
+  `runtime.Host` with first-class switch connections (`Q.Switch` / `Q.To`), a
+  name registrar (`Q.Get` / `Q.Put` / `Q.Names`), and a shared tuple space
+  (`Q.Space`). Start from code (`Start` / `Run` / `ListenAndServe`) or run
+  `cmd/teq` as a daemon that boots from a directory of JSON component descriptors
+  and hot-(re)deploys them. Switch and routing-gateway descriptors are fully
+  declarative — packager, framer, TLS, sign-on, echo, reconnect — so adding a
+  switch needs no code.
+- **`connector` — supervised, self-healing outbound switch links.** Keeps a
+  `link.Link` dialled and a `mux.Mux` running over it, reconnecting with bounded
+  backoff; optional `OnConnect` (sign-on / key exchange) and `Keepalive` (0800
+  echo) hooks; routes server-initiated frames to a space queue. Satisfies
+  `runtime.Component`. (The jPOS ChannelAdaptor + QMUX analog.)
+- **`gateway` — the inbound routing/transforming switch server.** Receives a
+  transaction, routes it to an upstream `Forwarder`, edits the request
+  (`BeforeRequest`) and the response (`BeforeResponse`) en route, and replies —
+  with an `OnError` decline path. Handles messages on a link concurrently;
+  satisfies `runtime.Component`.
+- **`trace` — per-transaction lifecycle.** Records one request/response cycle as
+  a single correlated unit (timestamped steps + PCI-masked message dumps),
+  carried in the request context so every participant annotates the same trace.
+  Renders with optional ANSI colour (`WithColor`) and a toggleable timestamp
+  column (`NoTimestamps`).
+- **`render/xmlio` and an XML channel framer (`link`).** Schema-aware ISO-8583
+  XML (un)marshal, plus a matching XML wire framer.
+- **`iso8583.Describe` / `Dump` / `LogValuer`.** A built-in, schema-aware message
+  describer with PCI masking (PAN / track / PIN), an optional raw-hex column, and
+  `WithColor()` for ANSI output.
+- **`mux.Mux.Done()` / `Err()`.** Observe a multiplexer's link death (or clean
+  close) without issuing a request — the basis for the reconnecting connector.
 - **`packager.Postilion()`** — an ISO 8583:1987 profile for Postilion-style
   switch links (e.g. agency/Interswitch acquirers): ASCII MTI, a **binary**
   primary+secondary bitmap, ASCII fixed and LL/LLL variable fields, and a DE 127
@@ -16,6 +53,9 @@ All notable changes to Isopace are recorded here. The format is based on
   binary sub-bitmap. Registered in `Profiles()` as `"postilion"`. Validated
   end-to-end against a live host (0800 sign-on → 0810, 0200 → 0210). A
   clean-room composition from public ISO 8583:1987 field semantics.
+- **Examples** — `flowdemo` (two-phase transaction flow), `runtimehost`
+  (component lifecycle + hot deploy), `teq` (named switch connections), and
+  `teqswitch` (the routing + transforming gateway, with `-serve`).
 
 ### Removed
 
@@ -96,5 +136,6 @@ tested under `go test -race`.
   authenticates in constant time; expose it only behind appropriate network
   controls.
 
-[Unreleased]: https://github.com/teqpace-services/isopace/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/teqpace-services/isopace/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/teqpace-services/isopace/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/teqpace-services/isopace/releases/tag/v0.1.0
