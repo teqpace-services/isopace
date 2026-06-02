@@ -183,6 +183,68 @@ func TestMuxCloseUnblocksPending(t *testing.T) {
 	}
 }
 
+func TestMuxDoneOnClose(t *testing.T) {
+	srv, err := listener.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer srv.Close()
+	go srv.Serve(func(l *link.Link) {
+		for {
+			if _, err := l.Receive(); err != nil {
+				return
+			}
+		}
+	})
+
+	c := iso8583.NewCodec(packager.ISO87A())
+	cl, err := link.Dial("tcp", srv.Addr().String())
+	if err != nil {
+		t.Fatal(err)
+	}
+	m := mux.New(cl, mux.FieldKeyer(c, 11, 41))
+
+	if m.Err() != nil {
+		t.Errorf("Err() = %v want nil while live", m.Err())
+	}
+	m.Close()
+	select {
+	case <-m.Done():
+	case <-time.After(time.Second):
+		t.Fatal("Done not closed after Close")
+	}
+	if !errors.Is(m.Err(), mux.ErrClosed) {
+		t.Errorf("Err() = %v want ErrClosed", m.Err())
+	}
+}
+
+func TestMuxDoneOnLinkDeath(t *testing.T) {
+	srv, err := listener.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	// Server drops the connection right after accepting it.
+	go srv.Serve(func(l *link.Link) { l.Close() })
+
+	c := iso8583.NewCodec(packager.ISO87A())
+	cl, err := link.Dial("tcp", srv.Addr().String())
+	if err != nil {
+		t.Fatal(err)
+	}
+	m := mux.New(cl, mux.FieldKeyer(c, 11, 41))
+	defer m.Close()
+	defer srv.Close()
+
+	select {
+	case <-m.Done():
+	case <-time.After(2 * time.Second):
+		t.Fatal("Done not closed after link death")
+	}
+	if m.Err() == nil {
+		t.Error("Err() = nil after link death, want the read error")
+	}
+}
+
 func goroutineBaseline() int {
 	time.Sleep(20 * time.Millisecond)
 	runtime.GC()
