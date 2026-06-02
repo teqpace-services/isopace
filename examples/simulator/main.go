@@ -38,7 +38,7 @@ import (
 	"github.com/teqpace-services/isopace/runtime"
 )
 
-const version = "0.2.0"
+const version = "0.3.0"
 
 func main() {
 	posAddr := flag.String("addr", "127.0.0.1:8583", "ISO-8583 listen address")

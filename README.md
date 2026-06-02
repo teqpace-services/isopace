@@ -9,13 +9,14 @@ It is an independent, clean-room implementation in the spirit of
 zero-copy decoding, a pluggable codec catalog, and goroutine-native concurrency.
 The module is **stdlib-only** — no third-party dependency in the module graph.
 
-> **Status: `v0.2.0` — switching-layer release.** Adds the `teq` container
-> (a jPOS Q2 analog): self-healing switch connectors, a routing/transforming
-> gateway, and per-transaction tracing. Feature-complete across the planned
-> layers and tested under `-race`, but pre-1.0: the API may change between minor
-> versions (see [`docs/versioning.md`](docs/versioning.md)). The software `Vault`
-> backend is for development/testing — production PIN and key handling require a
-> certified HSM.
+> **Status: `v0.3.0` — acquirer-profiles release.** Adds the `CoralPay` and
+> `Zone` ISO 8583:1987 switch profiles (each generated field-for-field from a
+> certified jPOS definition), a prefix-keyed SHA-256 message MAC, and a
+> fixed-width `tlv` codec. Feature-complete across the planned layers and tested
+> under `-race`, but pre-1.0: the API may change between minor versions (see
+> [`docs/versioning.md`](docs/versioning.md)). The software `Vault` backend is
+> for development/testing — production PIN and key handling require a certified
+> HSM.
 
 A product of **[Teqpace Services Ltd.](https://teqpace.com)**
 
