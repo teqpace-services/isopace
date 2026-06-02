@@ -14,6 +14,7 @@ package vault
 
 import (
 	"crypto/cipher"
+	"crypto/sha256"
 	"crypto/subtle"
 	"fmt"
 )
@@ -82,6 +83,29 @@ func VerifyMAC(alg MACAlgorithm, pad Padding, key, data, mac []byte) (bool, erro
 	}
 	if len(mac) == 0 || len(mac) > len(full) {
 		return false, fmt.Errorf("vault: MAC length %d out of range", len(mac))
+	}
+	return subtle.ConstantTimeCompare(full[:len(mac)], mac) == 1, nil
+}
+
+// SHA256MAC computes SHA-256(key ‖ data) — a prefix-keyed hash MAC used by some
+// acquirer links (e.g. CoralPay's DE 128 message hash and the param-download DE
+// 64), where key is the session-key bytes and data is the packed message up to the
+// MAC field. It is NOT HMAC: it is a plain prefix-keyed digest. Callers hex-encode
+// the returned 32 bytes to the 64-character on-wire field (the hex is inherently
+// fixed-width, so it matches the legacy zero-left-padded BigInteger form).
+func SHA256MAC(key, data []byte) []byte {
+	h := sha256.New()
+	h.Write(key)
+	h.Write(data)
+	return h.Sum(nil)
+}
+
+// VerifySHA256MAC recomputes SHA256MAC(key, data) and constant-time compares its
+// leftmost len(mac) bytes to mac (the full 32 bytes for an untruncated MAC).
+func VerifySHA256MAC(key, data, mac []byte) (bool, error) {
+	full := SHA256MAC(key, data)
+	if len(mac) == 0 || len(mac) > len(full) {
+		return false, fmt.Errorf("vault: SHA-256 MAC length %d out of range", len(mac))
 	}
 	return subtle.ConstantTimeCompare(full[:len(mac)], mac) == 1, nil
 }
