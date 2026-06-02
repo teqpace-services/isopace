@@ -106,11 +106,20 @@ type Option func(*renderConfig)
 type renderConfig struct {
 	timestamps bool
 	layout     string
+	color      bool
 	msgOpts    []iso8583.DescribeOption
 }
 
 // NoTimestamps drops the per-step timestamp column.
 func NoTimestamps() Option { return func(c *renderConfig) { c.timestamps = false } }
+
+// WithColor turns on ANSI colour. It is off by default so output piped to a file
+// or log pipeline stays clean; enable it for a terminal (see also [Color]).
+func WithColor() Option { return func(c *renderConfig) { c.color = true } }
+
+// Color sets ANSI colouring explicitly — handy with a runtime terminal check:
+// trace.Color(isatty(os.Stdout)).
+func Color(on bool) Option { return func(c *renderConfig) { c.color = on } }
 
 // WithTimeLayout sets the timestamp layout (a time.Format reference layout).
 func WithTimeLayout(layout string) Option { return func(c *renderConfig) { c.layout = layout } }
@@ -151,17 +160,17 @@ func (t *Trace) WriteTo(w io.Writer, opts ...Option) {
 	if n := len(entries); n > 0 {
 		total = entries[n-1].when.Sub(t.start)
 	}
-	fmt.Fprintf(w, "\ntrace %s · total %s\n", t.ID, total.Round(time.Microsecond))
+	header := fmt.Sprintf("trace %s · total %s", t.ID, total.Round(time.Microsecond))
+	fmt.Fprintf(w, "\n%s\n", cfg.paint(ansiBold, header))
 
 	for _, e := range entries {
 		switch e.kind {
 		case kindMessage:
-			// A self-contained, titled block; no extra indentation.
-			fmt.Fprint(w, iso8583.Dump(e.msg, append(e.msgTitle(), cfg.msgOpts...)...))
+			fmt.Fprint(w, cfg.message(e))
 		case kindError:
-			fmt.Fprintf(w, "%serror  %s\n", cfg.stamp(e.when), e.err)
+			fmt.Fprintf(w, "%s%s  %s\n", cfg.stamp(e.when), cfg.paint(ansiRed, "error"), cfg.paint(ansiRed, e.err.Error()))
 		default:
-			line := fmt.Sprintf("%s%-14s", cfg.stamp(e.when), e.label)
+			line := cfg.stamp(e.when) + cfg.paint(ansiCyan, fmt.Sprintf("%-14s", e.label))
 			if e.detail != "" {
 				line += "  " + e.detail
 			}
@@ -170,12 +179,41 @@ func (t *Trace) WriteTo(w io.Writer, opts ...Option) {
 	}
 }
 
-// stamp renders the timestamp prefix (with trailing spaces) or "" when off.
+// message renders a self-contained, titled message block (its title bold when
+// colour is on); no extra indentation.
+func (c renderConfig) message(e entry) string {
+	dump := iso8583.Dump(e.msg, append(e.msgTitle(), c.msgOpts...)...)
+	if c.color {
+		if i := strings.IndexByte(dump, '\n'); i > 0 {
+			dump = ansiBold + dump[:i] + ansiReset + dump[i:]
+		}
+	}
+	return dump
+}
+
+// stamp renders the timestamp prefix (dim, with trailing spaces) or "" when off.
 func (c renderConfig) stamp(when time.Time) string {
 	if !c.timestamps {
 		return ""
 	}
-	return when.Format(c.layout) + "  "
+	return c.paint(ansiDim, when.Format(c.layout)) + "  "
+}
+
+// ANSI styles used when colour is enabled.
+const (
+	ansiReset = "\x1b[0m"
+	ansiBold  = "\x1b[1m"
+	ansiDim   = "\x1b[2m"
+	ansiRed   = "\x1b[31m"
+	ansiCyan  = "\x1b[36m"
+)
+
+// paint wraps s in an ANSI code when colour is enabled.
+func (c renderConfig) paint(code, s string) string {
+	if !c.color || s == "" {
+		return s
+	}
+	return code + s + ansiReset
 }
 
 // msgTitle gives the message dump its section title (the entry label).

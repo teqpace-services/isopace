@@ -177,8 +177,9 @@ response · profile iso87-a
 ```
 
 `Describe` takes options: `trace.NoTimestamps()` drops the time column,
-`trace.WithTimeLayout(...)` changes the format, and `trace.Unmasked()` reveals
-PAN/track/PIN in a trusted context.
+`trace.WithTimeLayout(...)` changes the format, `trace.WithColor()` /
+`trace.Color(isTTY)` adds ANSI colour (off by default, so piped output stays
+clean), and `trace.Unmasked()` reveals PAN/track/PIN in a trusted context.
 
 A pure routing gateway (no transforms) is also declarative — a `gateway`
 descriptor with `route_to` a named connector — so `cmd/teq` can stand up an

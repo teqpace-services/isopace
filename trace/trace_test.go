@@ -98,6 +98,22 @@ func TestTraceNilSafe(t *testing.T) {
 	trace.From(context.Background()).Step("safe")
 }
 
+func TestTraceColor(t *testing.T) {
+	tr := trace.New("x")
+	tr.Step("received", "bytes", 70)
+	tr.Message("request", msg(t))
+
+	if strings.Contains(tr.Describe(), "\x1b[") {
+		t.Error("default Describe should emit no ANSI codes")
+	}
+	if !strings.Contains(tr.Describe(trace.WithColor()), "\x1b[") {
+		t.Error("WithColor should emit ANSI codes")
+	}
+	if strings.Contains(tr.Describe(trace.Color(false)), "\x1b[") {
+		t.Error("Color(false) should emit no ANSI codes")
+	}
+}
+
 func TestTraceFail(t *testing.T) {
 	tr := trace.New("x")
 	tr.Fail(context.DeadlineExceeded)
