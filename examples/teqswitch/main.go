@@ -106,8 +106,9 @@ func run(serve bool, addr string) error {
 		OnError: func(_ context.Context, req *iso8583.Message, _ error) (*iso8583.Message, error) {
 			return declineFor(req, "91"), nil // issuer/switch inoperative
 		},
-		// Print the full lifecycle of every transaction (PCI-masked).
-		Trace:   func(t *trace.Trace) { fmt.Print(t.Describe()) },
+		// Print the full lifecycle of every transaction (PCI-masked), in colour
+		// when writing to a terminal.
+		Trace:   func(t *trace.Trace) { fmt.Print(t.Describe(trace.Color(isTerminal(os.Stdout)))) },
 		Timeout: 3 * time.Second,
 	})
 	if err != nil {
@@ -173,6 +174,13 @@ func waitUp(sw *connector.Connector) {
 	for i := 0; i < 300 && (sw == nil || !sw.Connected()); i++ {
 		time.Sleep(10 * time.Millisecond)
 	}
+}
+
+// isTerminal reports whether f is a character device (a terminal), so colour is
+// only emitted interactively, not when piped to a file or log. Stdlib-only.
+func isTerminal(f *os.File) bool {
+	fi, err := f.Stat()
+	return err == nil && fi.Mode()&os.ModeCharDevice != 0
 }
 
 // send issues a purchase to the gateway and prints the (transformed) response.
