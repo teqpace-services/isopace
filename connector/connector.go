@@ -73,6 +73,10 @@ type Config struct {
 	// dead-but-open peer is detected without waiting for a real request. Optional.
 	Keepalive         func(ctx context.Context, m *mux.Mux) error
 	KeepaliveInterval time.Duration
+	// Unsolicited handles frames the peer sends that match no in-flight request —
+	// server-initiated advices, reversals, or sign-off. It runs on the read loop,
+	// so it must not block (hand off to a queue). Optional.
+	Unsolicited func(frame []byte)
 	// Log receives lifecycle events (default slog.Default).
 	Log *slog.Logger
 }
@@ -217,6 +221,9 @@ func (c *Connector) connect(ctx context.Context) (*mux.Mux, error) {
 	var opts []mux.Option
 	if c.cfg.Timeout > 0 {
 		opts = append(opts, mux.WithTimeout(c.cfg.Timeout))
+	}
+	if c.cfg.Unsolicited != nil {
+		opts = append(opts, mux.WithUnsolicitedHandler(c.cfg.Unsolicited))
 	}
 	m := mux.New(l, c.cfg.Keyer, opts...)
 	if c.cfg.OnConnect != nil {

@@ -1,0 +1,17 @@
+{
+  "name": "isw",
+  "type": "connector",
+  "enabled": true,
+  "config": {
+    "addr": "127.0.0.1:8583",
+    "packager": "iso87-a",
+    "framer": "length2",
+    "correlation_des": [11, 41],
+    "timeout_ms": 30000,
+    "min_backoff_ms": 500,
+    "max_backoff_ms": 30000,
+    "header": { "41": "TERM0001" },
+    "sign_on": { "mti": "0800", "nmic": "001" },
+    "echo": { "mti": "0800", "nmic": "301", "interval_ms": 15000 }
+  }
+}

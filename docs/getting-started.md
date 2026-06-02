@@ -78,6 +78,35 @@ echo (0800) that holds the link open and detects a dead peer. The underlying
 `link` options carry the framer (e.g. a Postilion 2-byte length prefix), TLS, and
 MAC filters.
 
+#### Run it as a daemon from a deploy directory
+
+`cmd/teq` is the container as a runnable — boot it from a directory of JSON
+descriptors and it stays up, hot-(re)deploying as the files change (the Q2
+experience). A switch descriptor fully specifies the link — packager, framer,
+sign-on, echo, reconnect — so adding one needs no code:
+
+```jsonc
+// examples/teq/deploy/isw.json
+{
+  "name": "isw", "type": "connector", "enabled": true,
+  "config": {
+    "addr": "127.0.0.1:8583", "packager": "iso87-a", "framer": "length2",
+    "sign_on": { "mti": "0800", "nmic": "001" },
+    "echo":    { "mti": "0800", "nmic": "301", "interval_ms": 15000 },
+    "header":  { "41": "TERM0001" }
+  }
+}
+```
+
+```sh
+go run ./examples/simulator -addr 127.0.0.1:8583   # a switch to talk to (terminal 1)
+go run ./cmd/teq -deploy ./examples/teq/deploy      # the container (terminal 2)
+```
+
+Inside the container, components find each other by name (`q.Get` / `q.To`) and
+decouple through a shared tuple space (`q.Space()`) — e.g. a connector routes
+server-initiated advices to a queue via its `unsolicited_queue`.
+
 ### Component host
 
 The `runtimehost` demo drives `runtime.Host` — the component container (the
