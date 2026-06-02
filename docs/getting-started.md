@@ -48,6 +48,18 @@ curl http://127.0.0.1:8584/readyz    # readiness (health checks)
 curl http://127.0.0.1:8584/metrics   # Prometheus exposition
 ```
 
+### Component host
+
+The `runtimehost` demo drives `runtime.Host` — the component container (the
+jPOS Q2 analog) — on its own, with no network. It shows the start-in-order /
+stop-in-reverse lifecycle, live `Deploy`/`Undeploy`, and a `Deployer` that turns
+a directory of declarative JSON descriptors into running components and
+hot-(re)deploys them as the files change.
+
+```sh
+go run ./examples/runtimehost
+```
+
 ### Transaction flow
 
 The `flowdemo` runs the `flow` package — the two-phase transaction manager — as a
