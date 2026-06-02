@@ -47,6 +47,7 @@ import (
 	"time"
 
 	"github.com/teqpace-services/isopace/connector"
+	"github.com/teqpace-services/isopace/gateway"
 	"github.com/teqpace-services/isopace/runtime"
 	"github.com/teqpace-services/isopace/space"
 )
@@ -114,6 +115,7 @@ func New(opts ...Option) *Q {
 	q.host = runtime.New(hostOpts...)
 	q.reg = runtime.NewRegistry()
 	q.reg.Register("connector", q.connectorFactory)
+	q.reg.Register("gateway", q.gatewayFactory)
 	return q
 }
 
@@ -136,6 +138,27 @@ func (q *Q) Switch(cfg connector.Config) (*connector.Connector, error) {
 		return nil, err
 	}
 	return c, nil
+}
+
+// Gateway registers an inbound switch server by name and returns it. The host
+// supervises it: it begins listening immediately if Q is running, else when Q
+// starts. Its Route typically resolves a destination with [Q.To].
+func (q *Q) Gateway(cfg gateway.Config) (*gateway.Gateway, error) {
+	if cfg.Log == nil {
+		cfg.Log = q.log
+	}
+	g, err := gateway.New(cfg)
+	if err != nil {
+		return nil, err
+	}
+	if err := q.putUnique(cfg.Name, g); err != nil {
+		return nil, err
+	}
+	if err := q.host.Deploy(context.Background(), g); err != nil {
+		q.remove(cfg.Name)
+		return nil, err
+	}
+	return g, nil
 }
 
 // Register adds a component (a listener, an admin endpoint, a flow worker, …) to

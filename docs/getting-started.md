@@ -107,6 +107,41 @@ Inside the container, components find each other by name (`q.Get` / `q.To`) and
 decouple through a shared tuple space (`q.Space()`) — e.g. a connector routes
 server-initiated advices to a queue via its `unsolicited_queue`.
 
+#### Routing + transforming gateway (the switch)
+
+A `gateway.Gateway` is the inbound half: it listens for transactions, routes each
+to an upstream via a `Forwarder` (a connector), and can transform the request on
+the way out and the response on the way back — the store-and-forward heart of a
+switch:
+
+```go
+q.Gateway(gateway.Config{
+    Name: "pos", Addr: ":9000", Codec: c,
+    Route: func(_ context.Context, req *iso8583.Message) (gateway.Forwarder, error) {
+        return q.To("isw"), nil               // pick the destination switch
+    },
+    BeforeForward: func(_ context.Context, req *iso8583.Message) (*iso8583.Message, error) {
+        _ = req.Set(32, acquirerID); return req, nil   // edit before forwarding
+    },
+    AfterForward: func(_ context.Context, _, resp *iso8583.Message) (*iso8583.Message, error) {
+        _ = resp.Set(48, "ROUTED-VIA-TEQ"); return resp, nil  // edit the reply
+    },
+    OnError: declineOnError,                   // build a decline if routing fails
+})
+```
+
+The `teqswitch` example shows the whole path — `client → gateway (transform) →
+connector → host → gateway (transform) → client`:
+
+```sh
+go run ./examples/teqswitch
+```
+
+A pure routing gateway (no transforms) is also declarative — a `gateway`
+descriptor with `route_to` a named connector — so `cmd/teq` can stand up an
+inbound switch and its upstream links entirely from the deploy directory
+(`examples/teq/deploy` has `pos` → `isw`). Transforms need code (`q.Gateway`).
+
 ### Component host
 
 The `runtimehost` demo drives `runtime.Host` — the component container (the

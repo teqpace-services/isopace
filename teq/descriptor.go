@@ -23,6 +23,7 @@ import (
 	"time"
 
 	"github.com/teqpace-services/isopace/connector"
+	"github.com/teqpace-services/isopace/gateway"
 	"github.com/teqpace-services/isopace/iso8583"
 	"github.com/teqpace-services/isopace/link"
 	"github.com/teqpace-services/isopace/mux"
@@ -166,6 +167,66 @@ func buildNetMgmt(codec *iso8583.Codec, schema *iso8583.Schema, mti, nmic string
 		}
 	}
 	return codec.Marshal(m, nil)
+}
+
+// gatewayDesc is the JSON config block of a "gateway" descriptor — a pure
+// routing switch server that forwards every inbound message to a named connector.
+// Request/response transforms require code (see [Q.Gateway]).
+type gatewayDesc struct {
+	Addr      string `json:"addr"`
+	Network   string `json:"network"`  // default "tcp"
+	Packager  string `json:"packager"` // profile id, default "iso87-a"
+	Framer    string `json:"framer"`   // "length2" (default) | "length4"
+	RouteTo   string `json:"route_to"` // name of the connector to forward to
+	TimeoutMS int    `json:"timeout_ms"`
+}
+
+// gatewayFactory builds a routing gateway from a descriptor. It forwards every
+// inbound message to the connector named route_to, resolved lazily so the order
+// of deployment does not matter.
+func (q *Q) gatewayFactory(name string, cfg json.RawMessage, env *runtime.Env) (runtime.Component, error) {
+	d := gatewayDesc{Network: "tcp", Packager: "iso87-a", Framer: "length2"}
+	if len(cfg) > 0 {
+		if err := json.Unmarshal(cfg, &d); err != nil {
+			return nil, fmt.Errorf("teq: gateway %q config: %w", name, err)
+		}
+	}
+	if d.Addr == "" {
+		return nil, fmt.Errorf("teq: gateway %q: addr required", name)
+	}
+	if d.RouteTo == "" {
+		return nil, fmt.Errorf("teq: gateway %q: route_to required", name)
+	}
+	schema, ok := packager.Profile(d.Packager)
+	if !ok {
+		return nil, fmt.Errorf("teq: gateway %q: unknown packager %q", name, d.Packager)
+	}
+	framer, err := framerByName(d.Framer)
+	if err != nil {
+		return nil, fmt.Errorf("teq: gateway %q: %w", name, err)
+	}
+	routeTo := d.RouteTo
+	g, err := gateway.New(gateway.Config{
+		Name:        name,
+		Network:     d.Network,
+		Addr:        d.Addr,
+		Codec:       iso8583.NewCodec(schema),
+		LinkOptions: []link.Option{link.WithFramer(framer)},
+		Route: func(context.Context, *iso8583.Message) (gateway.Forwarder, error) {
+			dest := q.To(routeTo)
+			if dest == nil {
+				return nil, fmt.Errorf("gateway %q: route_to %q not connected", name, routeTo)
+			}
+			return dest, nil
+		},
+		Timeout: msDur(d.TimeoutMS),
+		Log:     env.Logger(),
+	})
+	if err != nil {
+		return nil, err
+	}
+	q.Put(name, g)
+	return g, nil
 }
 
 // framerByName resolves a wire framer; the default is a 2-byte big-endian length
