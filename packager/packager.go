@@ -146,6 +146,8 @@ func Profiles() map[string]func() *iso8583.Schema {
 		"visa-base1": VisaBaseI,
 		"mastercard": Mastercard,
 		"postilion":  Postilion,
+		"coralpay":   CoralPay,
+		"zone":       Zone,
 	}
 }
 
