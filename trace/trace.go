@@ -18,9 +18,9 @@
 // together via [Trace.Describe].
 //
 // Message snapshots are rendered with the iso8583 Describe renderer, so they are
-// PCI-masked by default (pass iso8583.Unmasked() to [Trace.Describe] to override
-// in a trusted context). All methods are safe on a nil *Trace, so call sites can
-// write trace.From(ctx).Step(...) unconditionally whether or not tracing is on.
+// PCI-masked by default (use [Unmasked] to override in a trusted context). All
+// methods are safe on a nil *Trace, so call sites can write
+// trace.From(ctx).Step(...) unconditionally whether or not tracing is on.
 package trace
 
 import (
@@ -33,6 +33,9 @@ import (
 
 	"github.com/teqpace-services/isopace/iso8583"
 )
+
+// DefaultTimeLayout is the per-step timestamp format used unless overridden.
+const DefaultTimeLayout = "2006-01-02 15:04:05.000000"
 
 // Trace is the accumulated lifecycle of one transaction.
 type Trace struct {
@@ -52,7 +55,7 @@ const (
 )
 
 type entry struct {
-	at     time.Duration
+	when   time.Time
 	kind   entryKind
 	label  string
 	detail string
@@ -64,8 +67,8 @@ type entry struct {
 // generated per-request id).
 func New(id string) *Trace { return &Trace{ID: id, start: time.Now()} }
 
-// Step records a timestamped event. Trailing arguments are rendered as
-// space-separated key=value detail: Step("route", "dest", "isw").
+// Step records a timestamped event. Trailing arguments render as space-separated
+// key=value detail: Step("route", "dest", "isw").
 func (t *Trace) Step(label string, kv ...any) {
 	if t == nil {
 		return
@@ -73,8 +76,8 @@ func (t *Trace) Step(label string, kv ...any) {
 	t.add(entry{kind: kindStep, label: label, detail: pairs(kv)})
 }
 
-// Message records a snapshot of m under title; it is described (and PCI-masked)
-// when the trace is rendered.
+// Message records a snapshot of m under title; it is described (PCI-masked) when
+// the trace is rendered.
 func (t *Trace) Message(title string, m *iso8583.Message) {
 	if t == nil || m == nil {
 		return
@@ -91,55 +94,94 @@ func (t *Trace) Fail(err error) {
 }
 
 func (t *Trace) add(e entry) {
-	e.at = time.Since(t.start)
+	e.when = time.Now()
 	t.mu.Lock()
 	t.entries = append(t.entries, e)
 	t.mu.Unlock()
 }
 
-// Describe renders the whole lifecycle as a string. Options are passed to the
-// message renderer (e.g. iso8583.Unmasked()).
-func (t *Trace) Describe(opts ...iso8583.DescribeOption) string {
+// Option configures how a trace renders.
+type Option func(*renderConfig)
+
+type renderConfig struct {
+	timestamps bool
+	layout     string
+	msgOpts    []iso8583.DescribeOption
+}
+
+// NoTimestamps drops the per-step timestamp column.
+func NoTimestamps() Option { return func(c *renderConfig) { c.timestamps = false } }
+
+// WithTimeLayout sets the timestamp layout (a time.Format reference layout).
+func WithTimeLayout(layout string) Option { return func(c *renderConfig) { c.layout = layout } }
+
+// Unmasked reveals sensitive fields (PAN, track, PIN) in message dumps. Use only
+// in a trusted context.
+func Unmasked() Option {
+	return func(c *renderConfig) { c.msgOpts = append(c.msgOpts, iso8583.Unmasked()) }
+}
+
+// WithMessageOptions forwards arbitrary options to the message dumps.
+func WithMessageOptions(opts ...iso8583.DescribeOption) Option {
+	return func(c *renderConfig) { c.msgOpts = append(c.msgOpts, opts...) }
+}
+
+// Describe renders the whole lifecycle as a string.
+func (t *Trace) Describe(opts ...Option) string {
 	var b strings.Builder
 	t.WriteTo(&b, opts...)
 	return b.String()
 }
 
 // WriteTo writes the lifecycle description to w.
-func (t *Trace) WriteTo(w io.Writer, opts ...iso8583.DescribeOption) {
+func (t *Trace) WriteTo(w io.Writer, opts ...Option) {
 	if t == nil {
 		return
 	}
+	cfg := renderConfig{timestamps: true, layout: DefaultTimeLayout}
+	for _, o := range opts {
+		o(&cfg)
+	}
+
 	t.mu.Lock()
 	entries := append([]entry(nil), t.entries...)
 	t.mu.Unlock()
 
-	var total time.Duration
+	total := time.Duration(0)
 	if n := len(entries); n > 0 {
-		total = entries[n-1].at
+		total = entries[n-1].when.Sub(t.start)
 	}
-	fmt.Fprintf(w, "━━ trace %s  (%s) ━━━━━━━━━━━━━━━━━━━━\n", t.ID, total.Round(time.Microsecond))
+	fmt.Fprintf(w, "\ntrace %s · total %s\n", t.ID, total.Round(time.Microsecond))
+
 	for _, e := range entries {
 		switch e.kind {
-		case kindStep:
-			fmt.Fprintf(w, "  %-10s %s", fmtAt(e.at), e.label)
-			if e.detail != "" {
-				fmt.Fprintf(w, "  %s", e.detail)
-			}
-			fmt.Fprintln(w)
-		case kindError:
-			fmt.Fprintf(w, "  %-10s error  %s\n", fmtAt(e.at), e.err)
 		case kindMessage:
-			fmt.Fprintf(w, "  %-10s %s:\n", fmtAt(e.at), e.label)
-			dump := strings.TrimRight(iso8583.Dump(e.msg, opts...), "\n")
-			for _, line := range strings.Split(dump, "\n") {
-				fmt.Fprintf(w, "      %s\n", line)
+			// A self-contained, titled block; no extra indentation.
+			fmt.Fprint(w, iso8583.Dump(e.msg, append(e.msgTitle(), cfg.msgOpts...)...))
+		case kindError:
+			fmt.Fprintf(w, "%serror  %s\n", cfg.stamp(e.when), e.err)
+		default:
+			line := fmt.Sprintf("%s%-14s", cfg.stamp(e.when), e.label)
+			if e.detail != "" {
+				line += "  " + e.detail
 			}
+			fmt.Fprintln(w, strings.TrimRight(line, " "))
 		}
 	}
 }
 
-func fmtAt(d time.Duration) string { return "+" + d.Round(time.Microsecond).String() }
+// stamp renders the timestamp prefix (with trailing spaces) or "" when off.
+func (c renderConfig) stamp(when time.Time) string {
+	if !c.timestamps {
+		return ""
+	}
+	return when.Format(c.layout) + "  "
+}
+
+// msgTitle gives the message dump its section title (the entry label).
+func (e entry) msgTitle() []iso8583.DescribeOption {
+	return []iso8583.DescribeOption{iso8583.WithTitle(e.label)}
+}
 
 // pairs renders key=value detail from alternating arguments; a dangling final
 // argument is appended on its own.

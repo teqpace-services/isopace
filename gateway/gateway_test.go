@@ -305,7 +305,7 @@ func TestGatewayTrace(t *testing.T) {
 	if out == "" {
 		t.Fatal("no trace captured")
 	}
-	for _, want := range []string{"received", "request:", "route", "dest=host", "fee applied", "response:", "replied", "0200", "0210"} {
+	for _, want := range []string{"received", "request", "route", "dest=host", "fee applied", "response", "replied", "0200", "0210"} {
 		if !strings.Contains(out, want) {
 			t.Errorf("trace missing %q\n%s", want, out)
 		}
