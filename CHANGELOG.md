@@ -7,6 +7,46 @@ All notable changes to Isopace are recorded here. The format is based on
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-06-02
+
+The acquirer-profiles release: two more ISO 8583:1987 switch profiles —
+`CoralPay` and `Zone` — each generated field-for-field from a certified jPOS
+GenericPackager definition, plus the two wire primitives those links need: a
+prefix-keyed SHA-256 message MAC and a fixed-width tag-length-value codec. Still
+**stdlib-only**; every package is `gofmt`/`go vet` clean and tested under
+`go test -race`.
+
+### Added
+
+- **`packager.CoralPay()` — the CoralPay acquirer profile.** An ISO 8583:1987
+  layout generated field-for-field from the certified jPOS `GenericPackager`
+  definition (`fields2.xml`): ASCII MTI, an **ASCII-hex** primary+secondary
+  bitmap, hex-on-wire (`IFA_BINARY`) DE 52 PIN data, ASCII message-hash fields
+  DE 64 / DE 128, and the DE 127 reserved-private subfield group carried under a
+  6-digit length prefix over a 1-level sub-bitmap. Registered in `Profiles()` as
+  `"coralpay"`. Round-trip tested (MTI, ASCII fields, 8-byte DE 52). A clean-room
+  composition from public ISO 8583:1987 field semantics.
+- **`packager.Zone()` — the Zone acquirer profile.** An ISO 8583:1987 layout
+  generated field-for-field from the certified jPOS `zone.xml`: numeric-ASCII
+  MTI, a **binary** primary+secondary bitmap, raw (`IFB_BINARY`) DE 52 PIN data,
+  and the same DE 127 reserved-private subfield group under a 6-digit length
+  prefix. Registered in `Profiles()` as `"zone"`. This reintroduces a `Zone()`
+  constructor and the `"zone"` profile id — distinct from the representative
+  "site" layout removed in 0.2.0 — now derived from a certified definition.
+  Round-trip tested.
+- **`vault.SHA256MAC` / `vault.VerifySHA256MAC` — prefix-keyed SHA-256 message
+  MAC.** Computes `SHA-256(key ‖ data)`, the message-hash MAC used by acquirer
+  links such as CoralPay (DE 128 message hash, and the parameter-download
+  DE 64) — **not HMAC**, a plain prefix-keyed digest. `VerifySHA256MAC`
+  constant-time compares the leftmost `len(mac)` bytes. Callers hex-encode the
+  32-byte digest to the 64-character on-wire field.
+- **`tlv` — a fixed-width tag-length-value codec.** A new package with `Decode`
+  / `Encode` / `Get` for streams of (`TagWidth`-character tag +
+  `LenWidth`-decimal-digit length + value) elements — for example CoralPay's
+  terminal-parameter DE 62 (`"03"+"015"+<15-char MID>`, `"05"+"003"+<currency>`,
+  …). Distinct from the BER-TLV composite in `fieldcodec`, which uses encoded
+  tag/length octets.
+
 ## [0.2.0] - 2026-06-02
 
 The switching-layer release: a jPOS Q2-style container (`teq`) that keeps switch
@@ -136,6 +176,7 @@ tested under `go test -race`.
   authenticates in constant time; expose it only behind appropriate network
   controls.
 
-[Unreleased]: https://github.com/teqpace-services/isopace/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/teqpace-services/isopace/compare/v0.3.0...HEAD
+[0.3.0]: https://github.com/teqpace-services/isopace/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/teqpace-services/isopace/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/teqpace-services/isopace/releases/tag/v0.1.0
