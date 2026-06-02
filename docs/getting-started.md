@@ -48,6 +48,18 @@ curl http://127.0.0.1:8584/readyz    # readiness (health checks)
 curl http://127.0.0.1:8584/metrics   # Prometheus exposition
 ```
 
+### Transaction flow
+
+The `flowdemo` runs the `flow` package — the two-phase transaction manager — as a
+small in-process issuer pipeline (no network). A prepare pass validates, routes by
+BIN, and reserves funds; a commit pass then captures the funds, or an abort pass
+releases the hold and carries a decline. Journaling, the per-stage profiler, and
+idempotent retransmission are all wired in so each shows up in the output.
+
+```sh
+go run ./examples/flowdemo
+```
+
 ## Core API in a nutshell
 
 Build and encode a message:
