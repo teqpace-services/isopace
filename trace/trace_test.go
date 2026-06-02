@@ -41,7 +41,7 @@ func TestTraceDescribe(t *testing.T) {
 	tr.Step("replied")
 
 	out := tr.Describe()
-	for _, want := range []string{"isw-1", "received", "from=1.2.3.4", "bytes=70", "request:", "0200", "route", "dest=host", "replied"} {
+	for _, want := range []string{"isw-1", "received", "from=1.2.3.4", "bytes=70", "request", "0200", "route", "dest=host", "replied"} {
 		if !strings.Contains(out, want) {
 			t.Errorf("Describe missing %q\n%s", want, out)
 		}
@@ -54,8 +54,24 @@ func TestTraceDescribe(t *testing.T) {
 func TestTraceUnmasked(t *testing.T) {
 	tr := trace.New("x")
 	tr.Message("request", msg(t))
-	if !strings.Contains(tr.Describe(iso8583.Unmasked()), "4012345678909") {
+	if !strings.Contains(tr.Describe(trace.Unmasked()), "4012345678909") {
 		t.Error("Unmasked() should reveal the full PAN")
+	}
+}
+
+func TestTraceNoTimestamps(t *testing.T) {
+	tr := trace.New("x")
+	tr.Step("received", "bytes", 70)
+
+	out := tr.Describe(trace.NoTimestamps())
+	if strings.Contains(out, ":") { // the default layout contains "hh:mm:ss"
+		t.Errorf("NoTimestamps should omit the time column:\n%s", out)
+	}
+	if !strings.Contains(out, "received") || !strings.Contains(out, "bytes=70") {
+		t.Errorf("step missing from output:\n%s", out)
+	}
+	if !strings.Contains(tr.Describe(), ":") {
+		t.Error("default Describe should include a timestamp")
 	}
 }
 

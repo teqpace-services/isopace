@@ -146,25 +146,39 @@ in the per-message context, so `Route` / `BeforeRequest` / `BeforeResponse`
 annotate the same one via `trace.From(ctx)`:
 
 ```go
-Trace: func(t *trace.Trace) { fmt.Print(t.Describe()) },          // print each lifecycle
+Trace: func(t *trace.Trace) { fmt.Print(t.Describe()) },           // print each lifecycle
 // inside a hook:
 trace.From(ctx).Step("apply fee", "amount", amt, "fee", feeMinor)  // annotate it
 ```
 
-`go run ./examples/teqswitch` prints one block per transaction:
+`go run ./examples/teqswitch` prints one block per transaction — steps with an
+absolute timestamp, and self-titled message dumps:
 
 ```text
-━━ trace pos-1  (272µs) ━━━━━━━━━━━━━━━━━━━━
-  +5µs     received  from=127.0.0.1:53566 bytes=70
-  +8µs     request:    … MTI 0200, DE 2 = 401234***8909, DE 4 = 3000 …
-  +9µs     route  dest=host
-  +75µs    apply fee  amount=3000 fee=1000 acquirer=99001
-  +75µs    forwarded:  … DE 4 = 4000, DE 32 = 99001 …
-  +259µs   forwarded  dur=177µs
-  +262µs   stamp response  de48=ROUTED-VIA-TEQ
-  +264µs   response:   … MTI 0210, DE 39 = "00", DE 48 = "ROUTED-VIA-TEQ" …
-  +272µs   replied  bytes=59
+trace pos-1 · total 256µs
+2026-06-02 11:01:11.775857  received        from=127.0.0.1:54347 bytes=70
+request · profile iso87-a
+  MTI     : 0200
+  2   Primary Account Number     = 401234***8909
+  4   Amount, Transaction        = 3000
+  …
+2026-06-02 11:01:11.775872  route           dest=host
+2026-06-02 11:01:11.775921  apply fee       amount=3000 fee=1000 acquirer=99001
+forwarded · profile iso87-a
+  4   Amount, Transaction           = 4000
+  32  Acquiring Institution ID Code = 99001
+  …
+2026-06-02 11:01:11.776088  forwarded       dur=157µs
+2026-06-02 11:01:11.776093  stamp response  de48=ROUTED-VIA-TEQ
+response · profile iso87-a
+  39  Response Code             = "00"
+  48  Additional Data - Private = "ROUTED-VIA-TEQ"
+2026-06-02 11:01:11.776105  replied         bytes=59
 ```
+
+`Describe` takes options: `trace.NoTimestamps()` drops the time column,
+`trace.WithTimeLayout(...)` changes the format, and `trace.Unmasked()` reveals
+PAN/track/PIN in a trusted context.
 
 A pure routing gateway (no transforms) is also declarative — a `gateway`
 descriptor with `route_to` a named connector — so `cmd/teq` can stand up an
