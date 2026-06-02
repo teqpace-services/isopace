@@ -137,6 +137,35 @@ connector → host → gateway (transform) → client`:
 go run ./examples/teqswitch
 ```
 
+#### Per-transaction lifecycle trace
+
+Set `gateway.Config.Trace` to get a `trace.Trace` for every message — the whole
+request/response cycle as one correlated unit: timestamped steps, the routing
+decision, and PCI-masked dumps of the request and response. The trace is carried
+in the per-message context, so `Route` / `BeforeRequest` / `BeforeResponse`
+annotate the same one via `trace.From(ctx)`:
+
+```go
+Trace: func(t *trace.Trace) { fmt.Print(t.Describe()) },          // print each lifecycle
+// inside a hook:
+trace.From(ctx).Step("apply fee", "amount", amt, "fee", feeMinor)  // annotate it
+```
+
+`go run ./examples/teqswitch` prints one block per transaction:
+
+```text
+━━ trace pos-1  (272µs) ━━━━━━━━━━━━━━━━━━━━
+  +5µs     received  from=127.0.0.1:53566 bytes=70
+  +8µs     request:    … MTI 0200, DE 2 = 401234***8909, DE 4 = 3000 …
+  +9µs     route  dest=host
+  +75µs    apply fee  amount=3000 fee=1000 acquirer=99001
+  +75µs    forwarded:  … DE 4 = 4000, DE 32 = 99001 …
+  +259µs   forwarded  dur=177µs
+  +262µs   stamp response  de48=ROUTED-VIA-TEQ
+  +264µs   response:   … MTI 0210, DE 39 = "00", DE 48 = "ROUTED-VIA-TEQ" …
+  +272µs   replied  bytes=59
+```
+
 A pure routing gateway (no transforms) is also declarative — a `gateway`
 descriptor with `route_to` a named connector — so `cmd/teq` can stand up an
 inbound switch and its upstream links entirely from the deploy directory

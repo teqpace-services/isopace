@@ -48,6 +48,7 @@ import (
 	"github.com/teqpace-services/isopace/listener"
 	"github.com/teqpace-services/isopace/mux"
 	"github.com/teqpace-services/isopace/teq"
+	"github.com/teqpace-services/isopace/trace"
 )
 
 const feeMinor = 10_00 // gateway surcharge added before forwarding
@@ -90,20 +91,23 @@ func run(serve bool, addr string) error {
 			}
 			return nil, gateway.ErrNoRoute
 		},
-		BeforeRequest: func(_ context.Context, req *iso8583.Message) (*iso8583.Message, error) {
+		BeforeRequest: func(ctx context.Context, req *iso8583.Message) (*iso8583.Message, error) {
 			amt, _ := iso8583.Get[int64](req, 4)
 			_ = req.Set(4, amt+feeMinor)  // add a switch fee
 			_ = req.Set(32, int64(99001)) // stamp the acquiring institution id
-			fmt.Printf("   [gateway] +%d fee (%d->%d) + acquirer id, forwarding\n", feeMinor, amt, amt+feeMinor)
+			trace.From(ctx).Step("apply fee", "amount", amt, "fee", feeMinor, "acquirer", 99001)
 			return req, nil
 		},
-		BeforeResponse: func(_ context.Context, _, resp *iso8583.Message) (*iso8583.Message, error) {
+		BeforeResponse: func(ctx context.Context, _, resp *iso8583.Message) (*iso8583.Message, error) {
 			_ = resp.Set(48, "ROUTED-VIA-TEQ") // stamp the response
+			trace.From(ctx).Step("stamp response", "de48", "ROUTED-VIA-TEQ")
 			return resp, nil
 		},
 		OnError: func(_ context.Context, req *iso8583.Message, _ error) (*iso8583.Message, error) {
 			return declineFor(req, "91"), nil // issuer/switch inoperative
 		},
+		// Print the full lifecycle of every transaction (PCI-masked).
+		Trace:   func(t *trace.Trace) { fmt.Print(t.Describe()) },
 		Timeout: 3 * time.Second,
 	})
 	if err != nil {

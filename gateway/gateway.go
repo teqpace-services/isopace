@@ -30,11 +30,13 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"sync/atomic"
 	"time"
 
 	"github.com/teqpace-services/isopace/iso8583"
 	"github.com/teqpace-services/isopace/link"
 	"github.com/teqpace-services/isopace/listener"
+	"github.com/teqpace-services/isopace/trace"
 )
 
 // ErrNoRoute is returned (and passed to OnError) when Route selects no destination.
@@ -76,6 +78,11 @@ type Config struct {
 
 	// Timeout bounds handling of one message (route + forward + transform).
 	Timeout time.Duration
+	// Trace, if set, receives a completed trace.Trace for every handled message —
+	// the full request/response lifecycle (steps + masked message dumps) as one
+	// unit. The trace is carried in the per-message context, so Route /
+	// BeforeRequest / BeforeResponse annotate the same trace via trace.From(ctx).
+	Trace func(*trace.Trace)
 	// Log receives lifecycle and per-message error events (default slog.Default).
 	Log *slog.Logger
 }
@@ -85,6 +92,7 @@ type Gateway struct {
 	cfg Config
 	log *slog.Logger
 	srv *listener.Listener
+	seq atomic.Uint64 // per-request trace id sequence
 }
 
 // New validates cfg and builds a Gateway. Call Start to begin listening.
@@ -169,15 +177,27 @@ func (g *Gateway) handle(l *link.Link, frame []byte) {
 		defer cancel()
 	}
 
+	// Per-request trace, carried in ctx so hooks annotate the same one.
+	var tr *trace.Trace
+	if g.cfg.Trace != nil {
+		tr = trace.New(fmt.Sprintf("%s-%d", g.cfg.Name, g.seq.Add(1)))
+		ctx = trace.With(ctx, tr)
+		tr.Step("received", "from", l.RemoteAddr(), "bytes", len(frame))
+		defer g.cfg.Trace(tr)
+	}
+
 	req, err := g.cfg.Codec.Unmarshal(frame)
 	if err != nil {
+		tr.Fail(fmt.Errorf("decode inbound: %w", err))
 		g.log.LogAttrs(ctx, slog.LevelWarn, "gateway: undecodable inbound frame",
 			slog.String("gateway", g.cfg.Name), slog.String("error", err.Error()))
 		return
 	}
+	tr.Message("request", req)
 
 	resp, err := g.process(ctx, req)
 	if err != nil {
+		tr.Fail(err)
 		if resp = g.errorReply(ctx, req, err); resp == nil {
 			return
 		}
@@ -185,18 +205,26 @@ func (g *Gateway) handle(l *link.Link, frame []byte) {
 
 	out, err := g.cfg.Codec.Marshal(resp, nil)
 	if err != nil {
+		tr.Fail(fmt.Errorf("encode response: %w", err))
 		g.log.LogAttrs(ctx, slog.LevelError, "gateway: encode response",
 			slog.String("gateway", g.cfg.Name), slog.String("error", err.Error()))
 		return
 	}
+	tr.Message("response", resp)
 	if err := l.Send(out); err != nil {
+		tr.Fail(fmt.Errorf("send response: %w", err))
 		g.log.LogAttrs(ctx, slog.LevelWarn, "gateway: send response",
 			slog.String("gateway", g.cfg.Name), slog.String("error", err.Error()))
+		return
 	}
+	tr.Step("replied", "bytes", len(out))
 }
 
-// process routes, transforms, forwards, and transforms the response.
+// process routes, transforms, forwards, and transforms the response, recording
+// each stage on the context's trace (if any).
 func (g *Gateway) process(ctx context.Context, req *iso8583.Message) (*iso8583.Message, error) {
+	tr := trace.From(ctx)
+
 	dest, err := g.cfg.Route(ctx, req)
 	if err != nil {
 		return nil, err
@@ -204,6 +232,7 @@ func (g *Gateway) process(ctx context.Context, req *iso8583.Message) (*iso8583.M
 	if dest == nil {
 		return nil, ErrNoRoute
 	}
+	tr.Step("route", "dest", forwarderName(dest))
 
 	out := req
 	if g.cfg.BeforeRequest != nil {
@@ -213,6 +242,7 @@ func (g *Gateway) process(ctx context.Context, req *iso8583.Message) (*iso8583.M
 		}
 		if edited != nil {
 			out = edited
+			tr.Message("forwarded", out)
 		}
 	}
 
@@ -220,10 +250,12 @@ func (g *Gateway) process(ctx context.Context, req *iso8583.Message) (*iso8583.M
 	if err != nil {
 		return nil, fmt.Errorf("encode forward: %w", err)
 	}
+	started := time.Now()
 	respFrame, err := dest.Request(ctx, reqFrame)
 	if err != nil {
 		return nil, err
 	}
+	tr.Step("forwarded", "dur", time.Since(started).Round(time.Microsecond))
 	resp, err := g.cfg.Codec.Unmarshal(respFrame)
 	if err != nil {
 		return nil, fmt.Errorf("decode upstream response: %w", err)
@@ -239,6 +271,14 @@ func (g *Gateway) process(ctx context.Context, req *iso8583.Message) (*iso8583.M
 		}
 	}
 	return resp, nil
+}
+
+// forwarderName returns a Forwarder's Name (if it has one) for trace detail.
+func forwarderName(f Forwarder) string {
+	if n, ok := f.(interface{ Name() string }); ok {
+		return n.Name()
+	}
+	return fmt.Sprintf("%T", f)
 }
 
 // errorReply logs the failure and builds the reply via OnError, if configured.
