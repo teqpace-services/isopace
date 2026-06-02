@@ -23,12 +23,21 @@
 // 50.00, so the fee can flip an otherwise-approved amount to a decline.
 //
 //	go run ./examples/teqswitch
+//
+// Use -serve to keep the gateway listening after the samples so you can send your
+// own transactions to it and watch the transforms live:
+//
+//	go run ./examples/teqswitch -serve -addr 127.0.0.1:9000   # terminal 1
+//	go run ./examples/acquirer -addr 127.0.0.1:9000 -n 5      # terminal 2
 package main
 
 import (
 	"context"
+	"flag"
 	"fmt"
 	"os"
+	"os/signal"
+	"syscall"
 	"time"
 
 	"github.com/teqpace-services/isopace/connector"
@@ -44,13 +53,16 @@ import (
 const feeMinor = 10_00 // gateway surcharge added before forwarding
 
 func main() {
-	if err := run(); err != nil {
+	serve := flag.Bool("serve", false, "keep the gateway listening after the sample transactions (Ctrl+C to stop)")
+	addr := flag.String("addr", "127.0.0.1:0", "gateway listen address (pin a port, e.g. 127.0.0.1:9000, when using -serve)")
+	flag.Parse()
+	if err := run(*serve, *addr); err != nil {
 		fmt.Fprintln(os.Stderr, "teqswitch:", err)
 		os.Exit(1)
 	}
 }
 
-func run() error {
+func run(serve bool, addr string) error {
 	// Upstream host (the issuer/processor), approving up to 50.00.
 	hostAddr, closeHost := startHost(50_00)
 	defer closeHost()
@@ -70,7 +82,7 @@ func run() error {
 	// Inbound: a gateway that routes to the host and transforms in both directions.
 	gw, err := q.Gateway(gateway.Config{
 		Name:  "pos",
-		Addr:  "127.0.0.1:0",
+		Addr:  addr,
 		Codec: c,
 		Route: func(context.Context, *iso8583.Message) (gateway.Forwarder, error) {
 			if dest := q.To("host"); dest != nil {
@@ -116,6 +128,16 @@ func run() error {
 
 	send(c, m, 1, 30_00) // 30.00 + fee = 40.00 <= 50.00 -> approved
 	send(c, m, 2, 45_00) // 45.00 + fee = 55.00 >  50.00 -> declined by the fee
+
+	if serve {
+		fmt.Printf("\ngateway listening on %s — send your own transactions, e.g.:\n", gw.Addr())
+		fmt.Printf("  go run ./examples/acquirer -addr %s -n 5 -amount 2500\n", gw.Addr())
+		fmt.Println("press Ctrl+C to stop")
+		sigCtx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+		defer stop()
+		<-sigCtx.Done()
+		fmt.Println("\nshutting down")
+	}
 	return nil
 }
 

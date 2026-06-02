@@ -17,7 +17,7 @@ import "testing"
 // TestRunSwitch is a smoke test: client -> gateway -> host wires up, both
 // transforms apply, and it shuts down cleanly.
 func TestRunSwitch(t *testing.T) {
-	if err := run(); err != nil {
+	if err := run(false, "127.0.0.1:0"); err != nil {
 		t.Fatalf("run: %v", err)
 	}
 }
