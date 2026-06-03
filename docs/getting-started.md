@@ -1,13 +1,14 @@
 # Getting started
 
 Isopace is a Go library plus a set of example programs. This guide runs the
-examples and shows the core API. The full design is in
-[`ARCHITECTURE.md`](../ARCHITECTURE.md); the per-package API reference is the
-GoDoc (`go doc ./...` or pkg.go.dev).
+examples and shows the core API. The full design is in the
+[Architecture guide](architecture.md); the per-package API reference is the
+GoDoc (`go doc ./...` or
+[pkg.go.dev](https://pkg.go.dev/github.com/teqpace-services/isopace)).
 
 ## Requirements
 
-- Go matching the version in [`go.mod`](../go.mod).
+- Go matching the version in [`go.mod`](https://github.com/teqpace-services/isopace/blob/main/go.mod).
 - No other dependencies — Isopace is stdlib-only.
 
 ```sh
@@ -244,12 +245,12 @@ resp, _ := x.Request(context.Background(), wire)
 ```
 
 The shared logic behind the examples lives in
-[`examples/posdemo`](../examples/posdemo), with an end-to-end loopback test you
-can read as a worked example.
+[`examples/posdemo`](https://github.com/teqpace-services/isopace/tree/main/examples/posdemo),
+with an end-to-end loopback test you can read as a worked example.
 
 ## Where to go next
 
-- [`ARCHITECTURE.md`](../ARCHITECTURE.md) — the design and the layering rules.
-- [`docs/versioning.md`](versioning.md) — the SemVer policy and stability promise.
-- [`CHANGELOG.md`](../CHANGELOG.md) — what shipped in each release.
-- [`CONTRIBUTING.md`](../CONTRIBUTING.md) — the clean-room rule, SPDX headers, CLA.
+- [Architecture](architecture.md) — the design and the layering rules.
+- [Versioning policy](versioning.md) — the SemVer policy and stability promise.
+- [Changelog](changelog.md) — what shipped in each release.
+- [Contributing](contributing.md) — the clean-room rule, SPDX headers, and CLA.

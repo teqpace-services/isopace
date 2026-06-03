@@ -20,6 +20,11 @@ The module is **stdlib-only** — no third-party dependency in the module graph.
 
 A product of **[Teqpace Services Ltd.](https://teqpace.com)**
 
+📖 **Documentation:** <https://teqpace-services.github.io/isopace/> — getting
+started, the full architecture, a package tour, and the changelog. The per-package
+API reference is on
+[pkg.go.dev](https://pkg.go.dev/github.com/teqpace-services/isopace).
+
 ---
 
 ## Packages

@@ -1,0 +1,96 @@
+/* ── Isopace brand palette ──────────────────────────────────────────────────
+   Deep teal-navy primary with a teal accent. Applied via Material's
+   `primary: custom` / `accent: custom` palette hooks. */
+
+:root {
+  --isopace-navy: #0e4f6e;
+  --isopace-navy-dark: #0a3a52;
+  --isopace-navy-light: #2a7396;
+  --isopace-teal: #00a39a;
+  --isopace-teal-dark: #008c84;
+}
+
+[data-md-color-primary="custom"] {
+  --md-primary-fg-color: var(--isopace-navy);
+  --md-primary-fg-color--light: var(--isopace-navy-light);
+  --md-primary-fg-color--dark: var(--isopace-navy-dark);
+  --md-primary-bg-color: #ffffff;
+  --md-primary-bg-color--light: #ffffffb3;
+}
+
+[data-md-color-accent="custom"] {
+  --md-accent-fg-color: var(--isopace-teal);
+  --md-accent-fg-color--transparent: #00a39a1a;
+  --md-accent-bg-color: #ffffff;
+  --md-accent-bg-color--light: #ffffffb3;
+}
+
+/* Links pick up the teal accent for a consistent brand feel. */
+[data-md-color-scheme="default"] {
+  --md-typeset-a-color: var(--isopace-navy);
+}
+[data-md-color-scheme="slate"] {
+  --md-typeset-a-color: #3fd0c6;
+  --md-primary-fg-color: var(--isopace-navy-dark);
+}
+
+/* ── Landing-page hero ──────────────────────────────────────────────────── */
+
+.hero-tagline {
+  font-size: 1.25rem;
+  line-height: 1.6;
+  font-weight: 400;
+  color: var(--md-default-fg-color--light);
+  max-width: 46rem;
+}
+
+/* Badge images sit on one line with comfortable spacing. */
+.md-typeset p img[src*="img.shields.io"] {
+  margin: 0.15rem 0.3rem 0.15rem 0;
+  vertical-align: middle;
+}
+
+/* ── Grid cards: subtle lift on hover ───────────────────────────────────── */
+
+.md-typeset .grid.cards > ul > li {
+  border-radius: 0.5rem;
+  transition: border-color 125ms, box-shadow 125ms, transform 125ms;
+}
+
+.md-typeset .grid.cards > ul > li:hover {
+  border-color: var(--md-accent-fg-color);
+  box-shadow: 0 0.4rem 1.2rem rgba(0, 0, 0, 0.1);
+  transform: translateY(-2px);
+}
+
+.md-typeset .grid.cards > ul > li:hover .lg.middle {
+  color: var(--md-accent-fg-color);
+}
+
+/* ── Polish ─────────────────────────────────────────────────────────────── */
+
+/* Slightly tighter, more confident headings. */
+.md-typeset h1 {
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+/* Make the primary call-to-action button pop a little more. */
+.md-typeset .md-button--primary {
+  background-color: var(--isopace-teal);
+  border-color: var(--isopace-teal);
+}
+.md-typeset .md-button--primary:hover {
+  background-color: var(--isopace-teal-dark);
+  border-color: var(--isopace-teal-dark);
+}
+
+/* Rounded code blocks. */
+.md-typeset pre > code {
+  border-radius: 0.4rem;
+}
+
+/* Tables breathe a bit more. */
+.md-typeset table:not([class]) th {
+  background-color: var(--md-default-fg-color--lightest);
+}
