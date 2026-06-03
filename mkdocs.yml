@@ -1,0 +1,157 @@
+# ── Isopace documentation site ─────────────────────────────────────────────
+# Built with Material for MkDocs and deployed to GitHub Pages by
+# .github/workflows/docs.yml. Local preview:
+#
+#   python3 -m venv .docs-venv
+#   .docs-venv/bin/pip install -r docs/requirements.txt
+#   .docs-venv/bin/mkdocs serve
+
+site_name: Isopace
+site_url: https://teqpace-services.github.io/isopace/
+site_author: Teqpace Services Ltd.
+site_description: >-
+  Isopace — a stdlib-only ISO-8583 messaging and payment-switching framework
+  for Go: type-safe field access, zero-copy decode, a pluggable codec catalog,
+  and goroutine-native concurrency.
+
+repo_name: teqpace-services/isopace
+repo_url: https://github.com/teqpace-services/isopace
+edit_uri: edit/main/docs/
+copyright: >-
+  Copyright &copy; 2026 Teqpace Services Ltd. — dual-licensed AGPL-3.0-or-later
+  &amp; commercial.
+
+theme:
+  name: material
+  language: en
+  icon:
+    logo: material/swap-horizontal-bold
+    repo: fontawesome/brands/github
+    edit: material/pencil
+    view: material/eye
+  favicon: assets/favicon.svg
+  font:
+    text: Inter
+    code: JetBrains Mono
+  palette:
+    # Auto (follows OS) — shown first so the toggle starts here.
+    - media: "(prefers-color-scheme)"
+      toggle:
+        icon: material/brightness-auto
+        name: Switch to light mode
+    # Light.
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: custom
+      accent: custom
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    # Dark.
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: custom
+      accent: custom
+      toggle:
+        icon: material/brightness-4
+        name: Switch to system preference
+  features:
+    - announce.dismiss
+    - content.action.edit
+    - content.action.view
+    - content.code.annotate
+    - content.code.copy
+    - content.tabs.link
+    - content.tooltips
+    - navigation.footer
+    - navigation.indexes
+    - navigation.instant
+    - navigation.instant.progress
+    - navigation.sections
+    - navigation.tabs
+    - navigation.tabs.sticky
+    - navigation.top
+    - navigation.tracking
+    - search.highlight
+    - search.share
+    - search.suggest
+    - toc.follow
+
+extra_css:
+  - stylesheets/extra.css
+
+extra:
+  homepage: https://teqpace-services.github.io/isopace/
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/teqpace-services/isopace
+      name: Isopace on GitHub
+    - icon: material/web
+      link: https://teqpace.com
+      name: Teqpace Services Ltd.
+    - icon: material/package-variant-closed
+      link: https://pkg.go.dev/github.com/teqpace-services/isopace
+      name: API reference on pkg.go.dev
+
+markdown_extensions:
+  # Core typography / structure.
+  - abbr
+  - attr_list
+  - def_list
+  - footnotes
+  - md_in_html
+  - tables
+  - toc:
+      permalink: true
+      permalink_title: Anchor link to this section
+      title: On this page
+      # GitHub-compatible heading slugs so the hand-written anchors in the
+      # embedded ARCHITECTURE.md (e.g. "#5-schema--validation-model") resolve.
+      slugify: !!python/object/apply:pymdownx.slugs.slugify
+        kwds:
+          case: lower
+  # PyMdown extras.
+  - admonition
+  - pymdownx.details
+  - pymdownx.caret
+  - pymdownx.mark
+  - pymdownx.tilde
+  - pymdownx.keys
+  - pymdownx.smartsymbols
+  - pymdownx.inlinehilite
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.snippets:
+      base_path: ["."]
+      check_paths: true
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.tasklist:
+      custom_checkbox: true
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+
+plugins:
+  - search
+
+nav:
+  - Home: index.md
+  - Guide:
+      - Getting Started: getting-started.md
+      - Examples: examples.md
+  - Architecture: architecture.md
+  - Packages: packages.md
+  - Reference:
+      - Versioning Policy: versioning.md
+      - Changelog: changelog.md
+      - Contributing: contributing.md
+      - Security: security.md
+      - Licensing: licensing.md

@@ -9,7 +9,7 @@ Isopace is currently in the `0.x` series. Under SemVer, this means the public AP
 is **not yet stable**:
 
 - **`0.MINOR.0`** (minor bumps) may contain breaking API changes. Each is
-  described in [`CHANGELOG.md`](../CHANGELOG.md), with migration notes when a
+  described in the [changelog](changelog.md), with migration notes when a
   change is not source-compatible.
 - **`0.x.PATCH`** (patch bumps) are bug fixes and additive, source-compatible
   changes only.
@@ -44,7 +44,7 @@ It does **not** cover:
 
 ## Go version
 
-Isopace targets the Go version declared in [`go.mod`](../go.mod). The minimum
+Isopace targets the Go version declared in [`go.mod`](https://github.com/teqpace-services/isopace/blob/main/go.mod). The minimum
 supported Go version may be raised in a minor release; that bump is noted in the
 changelog.
 

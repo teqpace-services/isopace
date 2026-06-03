@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32" role="img" aria-label="Isopace">
+  <rect width="32" height="32" rx="7" fill="#0e4f6e"/>
+  <!-- swap-horizontal: top arrow → , bottom arrow ← -->
+  <g fill="none" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M8 12 H22" stroke="#ffffff"/>
+    <path d="M19 9 L22 12 L19 15" stroke="#ffffff"/>
+    <path d="M24 20 H10" stroke="#00a39a"/>
+    <path d="M13 17 L10 20 L13 23" stroke="#00a39a"/>
+  </g>
+</svg>

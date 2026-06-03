@@ -34,3 +34,7 @@ vendor/
 *.pem
 *.key
 secrets/
+
+# Documentation site (MkDocs) build output + local toolchain venv
+/site/
+/.docs-venv/
