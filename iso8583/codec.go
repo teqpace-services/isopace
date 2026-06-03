@@ -130,7 +130,7 @@ func (c *Codec) Marshal(m *Message, dst []byte) ([]byte, error) {
 	var bm Bitmap
 	for de := 1; de < len(m.slots); de++ {
 		if m.slots[de].present {
-			bm.Set(de)
+			bm.set(de)
 		}
 	}
 	if s.bitmap.Codec == nil {

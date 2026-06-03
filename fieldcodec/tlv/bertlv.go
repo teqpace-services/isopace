@@ -73,7 +73,7 @@ func (berTLV) DecodeBody(body []byte, _ int, def *iso8583.FieldDef) (iso8583.Val
 		} else {
 			tv = iso8583.BytesValue(val)
 		}
-		child.PutTag(tag, tv)
+		child.SetTag(tag, tv)
 	}
 	return iso8583.CompositeValue(body, child), nil
 }

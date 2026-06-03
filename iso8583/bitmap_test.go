@@ -20,7 +20,7 @@ import (
 func TestBitmapSetIsSetClear(t *testing.T) {
 	var b Bitmap
 	for _, de := range []int{2, 3, 64, 65, 128, 129, 192} {
-		b.Set(de)
+		b.set(de)
 	}
 	for _, de := range []int{2, 3, 64, 65, 128, 129, 192} {
 		if !b.IsSet(de) {
@@ -30,7 +30,7 @@ func TestBitmapSetIsSetClear(t *testing.T) {
 	if b.IsSet(4) {
 		t.Errorf("DE 4 should not be set")
 	}
-	b.Clear(65)
+	b.clear(65)
 	if b.IsSet(65) {
 		t.Errorf("DE 65 should be cleared")
 	}
@@ -43,10 +43,10 @@ func TestBitmapSetIsSetClear(t *testing.T) {
 func TestBitmapRangeAscendingExcludesContinuation(t *testing.T) {
 	var b Bitmap
 	// Set continuation bits plus real fields.
-	b.Set(1)  // continuation
-	b.Set(65) // continuation
+	b.set(1)  // continuation
+	b.set(65) // continuation
 	for _, de := range []int{2, 11, 70, 129} {
-		b.Set(de)
+		b.set(de)
 	}
 	var got []int
 	b.Range(func(de int) bool {
@@ -64,15 +64,15 @@ func TestBitmapRangeAscendingExcludesContinuation(t *testing.T) {
 
 func TestBitmapWidth(t *testing.T) {
 	var b Bitmap
-	b.Set(2)
+	b.set(2)
 	if b.Width() != 64 {
 		t.Errorf("primary-only width = %d want 64", b.Width())
 	}
-	b.Set(1) // secondary continuation
+	b.set(1) // secondary continuation
 	if b.Width() != 128 {
 		t.Errorf("secondary width = %d want 128", b.Width())
 	}
-	b.Set(65) // tertiary continuation
+	b.set(65) // tertiary continuation
 	if b.Width() != 192 {
 		t.Errorf("tertiary width = %d want 192", b.Width())
 	}
@@ -81,7 +81,7 @@ func TestBitmapWidth(t *testing.T) {
 func TestBitmapRangeEarlyStop(t *testing.T) {
 	var b Bitmap
 	for _, de := range []int{2, 3, 4, 5} {
-		b.Set(de)
+		b.set(de)
 	}
 	count := 0
 	b.Range(func(de int) bool {

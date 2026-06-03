@@ -181,9 +181,9 @@ func NewTLV(sub *Schema) *Message {
 	return &Message{schema: sub, tags: make(map[string]tagSlot), owned: true}
 }
 
-// PutTag stores a decoded canonical value under a BER-TLV tag (canonicalised to
+// SetTag stores a decoded canonical value under a BER-TLV tag (canonicalised to
 // uppercase), preserving first-seen order for deterministic re-encoding.
-func (m *Message) PutTag(tag string, v Value) {
+func (m *Message) SetTag(tag string, v Value) {
 	key := strings.ToUpper(tag)
 	if m.tags == nil {
 		m.tags = make(map[string]tagSlot)
@@ -303,8 +303,8 @@ func (m *Message) Set(de int, v any) error {
 	s.fromSrc = false
 	m.owned = true
 	if de >= 1 {
-		m.bm.Set(de)
-		m.dirty.Set(de)
+		m.bm.set(de)
+		m.dirty.set(de)
 	}
 	return nil
 }
@@ -335,7 +335,7 @@ func (m *Message) SetP(p FieldPath, v any) error {
 		if tagDef != nil {
 			val.codec = tagDef.Codec
 		}
-		m.PutTag(tag, val)
+		m.SetTag(tag, val)
 		m.owned = true
 		return nil
 	}
@@ -392,8 +392,8 @@ func (m *Message) ensureChild(de int, def *FieldDef) (*Message, error) {
 	s.fromSrc = false
 	m.owned = true
 	if de >= 1 {
-		m.bm.Set(de)
-		m.dirty.Set(de)
+		m.bm.set(de)
+		m.dirty.set(de)
 	}
 	return child, nil
 }
@@ -418,7 +418,7 @@ func (m *Message) Unset(de int) {
 	}
 	*s = slot{}
 	if de >= 1 {
-		m.bm.Clear(de)
+		m.bm.clear(de)
 	}
 	m.owned = true
 }
