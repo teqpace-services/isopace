@@ -7,6 +7,18 @@ the [versioning policy](https://teqpace-services.github.io/isopace/versioning/).
 
 ## [Unreleased]
 
+### Added
+
+- **`vault` capability interfaces** for HSM adapters. The `vault.Vault` façade is
+  now composed from `PINEncryptor`, `PINTranslator`, and `Macer`, so a hardware
+  adapter can implement exactly the operations its device supports — a
+  general-purpose PKCS#11 HSM provides `Macer` (and possibly `PINEncryptor`),
+  while a payment HSM additionally provides `PINTranslator`. `Vault` keeps the
+  same method set, so this is **source-compatible**. `PINTranslator` documents
+  the PCI PIN Security contract: a conforming hardware implementation must
+  re-encipher atomically inside the device so the clear PIN never leaves it, and
+  an adapter that cannot do so (e.g. stock PKCS#11) must not implement it.
+
 ## [0.3.0] - 2026-06-02
 
 The acquirer-profiles release: two more ISO 8583:1987 switch profiles —
