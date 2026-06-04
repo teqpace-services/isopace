@@ -18,6 +18,16 @@ the [versioning policy](https://teqpace-services.github.io/isopace/versioning/).
   the PCI PIN Security contract: a conforming hardware implementation must
   re-encipher atomically inside the device so the clear PIN never leaves it, and
   an adapter that cannot do so (e.g. stock PKCS#11) must not implement it.
+- **`adapters/pkcs11` — HSM-backed MAC via a PKCS#11 token.** The adapter now
+  implements `vault.Macer` (`GenerateMAC` / `VerifyMAC`) for ISO 9797-1
+  algorithm 1 (single-DES CBC-MAC) and algorithm 3 (ANSI X9.19 retail MAC),
+  composed from the token's 3DES primitives so the key never leaves the device.
+  The output is byte-for-byte identical to `vault.GenerateMAC`, **cross-checked
+  against a real token under SoftHSM2 in CI**. Per the `PINTranslator` contract
+  the type deliberately advertises **only** `Macer` — it does not implement PIN
+  translate (no PCI-secure stock-PKCS#11 mechanism exists) or PIN-block encrypt
+  (a clear-PIN, issuer-context operation). Separate cgo module; the core stays
+  stdlib-only.
 
 ### Changed
 
