@@ -10,8 +10,8 @@ zero-copy decoding, a pluggable codec catalog, and goroutine-native concurrency.
 The module is **stdlib-only** — no third-party dependency in the module graph.
 
 > **Status: `v0.3.0` — acquirer-profiles release.** Adds the `CoralPay` and
-> `Zone` ISO 8583:1987 switch profiles (each generated field-for-field from a
-> certified jPOS definition), a prefix-keyed SHA-256 message MAC, and a
+> `Zone` ISO 8583:1987 switch profiles (each a clean-room layout composed from
+> public ISO 8583:1987 field semantics), a prefix-keyed SHA-256 message MAC, and a
 > fixed-width `tlv` codec. Feature-complete across the planned layers and tested
 > under `-race`, but pre-1.0: the API may change between minor versions (see
 > [`docs/versioning.md`](docs/versioning.md)). The software `Vault` backend is
