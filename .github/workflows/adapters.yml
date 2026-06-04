@@ -1,0 +1,56 @@
+name: Adapters
+
+# The adapter modules live in their own go.mod files so the core module graph
+# stays stdlib-only. They are not covered by the root CI's ./... , so build and
+# test each one independently here.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'adapters/**'
+      - 'runtime/**'
+      - 'store/**'
+      - 'go.mod'
+      - '.github/workflows/adapters.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'adapters/**'
+      - 'runtime/**'
+      - 'store/**'
+      - 'go.mod'
+      - '.github/workflows/adapters.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: ${{ matrix.module }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        module: [adapters/otel, adapters/sql]
+    defaults:
+      run:
+        working-directory: ${{ matrix.module }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.26'
+          check-latest: true
+      - name: Verify formatting
+        run: |
+          fmt_out="$(gofmt -l .)"
+          if [ -n "$fmt_out" ]; then
+            echo "Not gofmt-clean:"; echo "$fmt_out"; exit 1
+          fi
+      - name: Build
+        run: go build ./...
+      - name: Vet
+        run: go vet ./...
+      - name: Test (race)
+        run: go test -race ./...
