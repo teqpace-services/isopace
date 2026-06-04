@@ -19,11 +19,19 @@ the [versioning policy](https://teqpace-services.github.io/isopace/versioning/).
   re-encipher atomically inside the device so the clear PIN never leaves it, and
   an adapter that cannot do so (e.g. stock PKCS#11) must not implement it.
 
+### Changed
+
+- **Docs:** corrected the `CoralPay` / `Zone` profile descriptions to state their
+  actual provenance — clean-room layouts composed from public ISO 8583:1987 field
+  semantics and the acquirers' published field tables — replacing earlier wording
+  that implied derivation from a jPOS packager definition. No code change.
+
 ## [0.3.0] - 2026-06-02
 
 The acquirer-profiles release: two more ISO 8583:1987 switch profiles —
-`CoralPay` and `Zone` — each generated field-for-field from a certified jPOS
-GenericPackager definition, plus the two wire primitives those links need: a
+`CoralPay` and `Zone` — each a clean-room layout composed from public
+ISO 8583:1987 field semantics and the acquirer's published field tables, plus
+the two wire primitives those links need: a
 prefix-keyed SHA-256 message MAC and a fixed-width tag-length-value codec. Still
 **stdlib-only**; every package is `gofmt`/`go vet` clean and tested under
 `go test -race`.
@@ -31,21 +39,21 @@ prefix-keyed SHA-256 message MAC and a fixed-width tag-length-value codec. Still
 ### Added
 
 - **`packager.CoralPay()` — the CoralPay acquirer profile.** An ISO 8583:1987
-  layout generated field-for-field from the certified jPOS `GenericPackager`
-  definition (`fields2.xml`): ASCII MTI, an **ASCII-hex** primary+secondary
-  bitmap, hex-on-wire (`IFA_BINARY`) DE 52 PIN data, ASCII message-hash fields
+  layout for the CoralPay acquirer link: ASCII MTI, an **ASCII-hex**
+  primary+secondary bitmap, hex-on-wire (ASCII-hex) DE 52 PIN data, ASCII
+  message-hash fields
   DE 64 / DE 128, and the DE 127 reserved-private subfield group carried under a
   6-digit length prefix over a 1-level sub-bitmap. Registered in `Profiles()` as
   `"coralpay"`. Round-trip tested (MTI, ASCII fields, 8-byte DE 52). A clean-room
   composition from public ISO 8583:1987 field semantics.
 - **`packager.Zone()` — the Zone acquirer profile.** An ISO 8583:1987 layout
-  generated field-for-field from the certified jPOS `zone.xml`: numeric-ASCII
-  MTI, a **binary** primary+secondary bitmap, raw (`IFB_BINARY`) DE 52 PIN data,
-  and the same DE 127 reserved-private subfield group under a 6-digit length
-  prefix. Registered in `Profiles()` as `"zone"`. This reintroduces a `Zone()`
-  constructor and the `"zone"` profile id — distinct from the representative
-  "site" layout removed in 0.2.0 — now derived from a certified definition.
-  Round-trip tested.
+  for the Zone acquirer link: numeric-ASCII MTI, a **binary** primary+secondary
+  bitmap, raw-binary DE 52 PIN data, and the same DE 127 reserved-private
+  subfield group under a 6-digit length prefix. Registered in `Profiles()` as
+  `"zone"`. This reintroduces a `Zone()` constructor and the `"zone"` profile id
+  — distinct from the representative "site" layout removed in 0.2.0 — a
+  clean-room composition from public ISO 8583:1987 field semantics. Round-trip
+  tested.
 - **`vault.SHA256MAC` / `vault.VerifySHA256MAC` — prefix-keyed SHA-256 message
   MAC.** Computes `SHA-256(key ‖ data)`, the message-hash MAC used by acquirer
   links such as CoralPay (DE 128 message hash, and the parameter-download
