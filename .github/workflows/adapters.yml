@@ -32,7 +32,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        module: [adapters/otel, adapters/sql]
+        module: [adapters/otel, adapters/sql, adapters/payshield]
     defaults:
       run:
         working-directory: ${{ matrix.module }}

@@ -18,6 +18,18 @@ the [versioning policy](https://teqpace-services.github.io/isopace/versioning/).
   the PCI PIN Security contract: a conforming hardware implementation must
   re-encipher atomically inside the device so the clear PIN never leaves it, and
   an adapter that cannot do so (e.g. stock PKCS#11) must not implement it.
+- **`adapters/payshield` — Thales payShield payment-HSM adapter (scaffold).** A
+  reference adapter that exposes a payShield over its host-command protocol as
+  `vault.PINTranslator` (PCI-secure PIN translate — the operation a general-purpose
+  PKCS#11 HSM cannot do) and `vault.Macer` (ISO 9797-1 MAC). Keys are named by the
+  device's LMK key token; the clear key never leaves the device. Ships with an
+  in-repo `Simulator` — a protocol **test double** whose cryptography is the
+  Isopace software vault — so the command flow (framing, command building,
+  response/error-code parsing, capability surface) is exercised end to end in CI
+  without hardware. **Scaffold:** the on-wire field layout is a simplified stand-in
+  for payShield's positional fields and it has not been validated against real
+  hardware/LMK schemes — pending device validation and security review (B1).
+  Separate, stdlib-only module.
 
 ### Changed
 
