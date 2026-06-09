@@ -18,10 +18,9 @@ import (
 	"github.com/teqpace-services/isopace/iso8583"
 )
 
-// Zone is an ISO 8583:1987 profile for the Zone acquirer link, generated
-// field-for-field from the certified jPOS GenericPackager definition (zone.xml)
-// used by the legacy switch-gateway. It reuses the postField/p* shorthands from
-// postilion.go.
+// Zone is an ISO 8583:1987 profile for the Zone acquirer link — a clean-room
+// layout composed from public ISO 8583:1987 field semantics and Zone's published
+// field tables. It reuses the postField/p* shorthands from postilion.go.
 func Zone() *iso8583.Schema {
 	sub := iso8583.NewSchema("zone-127").
 		Headerless().
