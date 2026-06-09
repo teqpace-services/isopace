@@ -7,12 +7,34 @@ the [versioning policy](https://teqpace-services.github.io/isopace/versioning/).
 
 ## [Unreleased]
 
+API freeze-prep ahead of v1: tighten the public surface so the always-derived
+bitmap invariant is enforced by the type system, and align tag-write naming with
+the rest of the field API.
+
+### Added
+
+- **`iso8583.BitmapFromWords([3]uint64)` and `iso8583.BitmapFor(des ...int)`** —
+  immutable `Bitmap` constructors. `BitmapFromWords` is the wire/word-level path
+  for `BitmapCodec` implementations; `BitmapFor` builds a bitmap from present DE
+  numbers for codec authors and tests.
+
 ### Changed
 
+- **`iso8583.Message.PutTag` renamed to `SetTag`**, for consistency with the
+  `Set` / `SetS` / `SetP` family. **Breaking** for direct callers.
 - **Docs:** corrected the `CoralPay` / `Zone` profile descriptions to state their
   actual provenance — clean-room layouts composed from public ISO 8583:1987 field
   semantics and the acquirers' published field tables — replacing earlier wording
   that implied derivation from a jPOS packager definition. No code change.
+
+### Removed
+
+- **Unexported the engine-internal `Bitmap` mutators** `Set`, `Clear`, and
+  `SetWord`. The wire bitmap is always derived from the present-field set at
+  marshal time, so application code never mutates a bitmap directly; this makes
+  that invariant impossible to violate through the public API. **Breaking** —
+  construct bitmaps with `BitmapFromWords` / `BitmapFor` instead. The read
+  methods (`IsSet`, `Word`, `Count`, `Width`, `Range`, `String`) are unchanged.
 
 ## [0.3.0] - 2026-06-02
 

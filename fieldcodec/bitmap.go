@@ -58,25 +58,25 @@ type bitmapCodec struct{ repr wordRepr }
 func (c bitmapCodec) Name() string { return c.repr.name() }
 
 func (c bitmapCodec) ReadBitmap(src []byte, off, maxLevels int) (iso8583.Bitmap, int, error) {
-	var bm iso8583.Bitmap
+	var words [3]uint64
 	wl := c.repr.wireLen()
 	for level := 0; level < 3; level++ {
 		// Overflow-safe bounds check (off can be large/adversarial): never form
 		// off+wl, which could wrap negative and pass a naive comparison.
 		if off < 0 || off > len(src) || len(src)-off < wl {
-			return bm, 0, ErrShortBitmap
+			return iso8583.Bitmap{}, 0, ErrShortBitmap
 		}
 		w, ok := c.repr.get(src[off : off+wl])
 		if !ok {
-			return bm, 0, ErrBadHex
+			return iso8583.Bitmap{}, 0, ErrBadHex
 		}
-		bm.SetWord(level, w)
+		words[level] = w
 		off += wl
 		if w&contMSB == 0 || level+1 >= maxLevels {
 			break
 		}
 	}
-	return bm, off, nil
+	return iso8583.BitmapFromWords(words), off, nil
 }
 
 func (c bitmapCodec) WriteBitmap(dst []byte, bm iso8583.Bitmap, maxLevels int) ([]byte, error) {

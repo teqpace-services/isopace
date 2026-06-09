@@ -161,10 +161,7 @@ func TestAmountCodecs(t *testing.T) {
 }
 
 func TestBitmapCodecs(t *testing.T) {
-	var bm iso8583.Bitmap
-	bm.Set(2)
-	bm.Set(3)
-	bm.Set(70) // secondary
+	bm := iso8583.BitmapFor(2, 3, 70) // 70 is in the secondary bitmap
 
 	for _, bc := range []iso8583.BitmapCodec{fieldcodec.BitmapBinary, fieldcodec.BitmapHex, fieldcodec.BitmapEBCDIC} {
 		wire, err := bc.WriteBitmap(nil, bm, 2)
@@ -181,8 +178,7 @@ func TestBitmapCodecs(t *testing.T) {
 	}
 
 	// Primary-only stays one level.
-	var p iso8583.Bitmap
-	p.Set(2)
+	p := iso8583.BitmapFor(2)
 	wire, _ := fieldcodec.BitmapBinary.WriteBitmap(nil, p, 2)
 	if len(wire) != 8 {
 		t.Errorf("primary-only binary bitmap = %d bytes want 8", len(wire))

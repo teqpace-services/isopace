@@ -146,29 +146,29 @@ const (
 )
 
 func (binBitmap) ReadBitmap(src []byte, off, maxLevels int) (Bitmap, int, error) {
-	var bm Bitmap
+	var words [3]uint64
 	if off+8 > len(src) {
-		return bm, 0, errTruncated
+		return Bitmap{}, 0, errTruncated
 	}
 	w0 := binary.BigEndian.Uint64(src[off:])
-	bm.SetWord(0, w0)
+	words[0] = w0
 	next := off + 8
 	if w0&maskDE1 != 0 && maxLevels >= 2 {
 		if next+8 > len(src) {
-			return bm, 0, errTruncated
+			return Bitmap{}, 0, errTruncated
 		}
 		w1 := binary.BigEndian.Uint64(src[next:])
-		bm.SetWord(1, w1)
+		words[1] = w1
 		next += 8
 		if w1&maskDE65 != 0 && maxLevels >= 3 {
 			if next+8 > len(src) {
-				return bm, 0, errTruncated
+				return Bitmap{}, 0, errTruncated
 			}
-			bm.SetWord(2, binary.BigEndian.Uint64(src[next:]))
+			words[2] = binary.BigEndian.Uint64(src[next:])
 			next += 8
 		}
 	}
-	return bm, next, nil
+	return BitmapFromWords(words), next, nil
 }
 
 func (binBitmap) WriteBitmap(dst []byte, bm Bitmap, maxLevels int) ([]byte, error) {

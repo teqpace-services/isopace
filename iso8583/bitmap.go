@@ -53,9 +53,9 @@ func (b Bitmap) IsSet(de int) bool {
 	return b.words[w]&mask != 0
 }
 
-// Set marks de present. Intended for engine use; application code never calls
-// it directly (presence is derived from set fields at marshal time).
-func (b *Bitmap) Set(de int) {
+// set marks de present. Engine-internal: presence is derived from the set of
+// present fields at marshal time, never set by application code.
+func (b *Bitmap) set(de int) {
 	if de < 1 || de > maxDEIndex {
 		return
 	}
@@ -63,8 +63,8 @@ func (b *Bitmap) Set(de int) {
 	b.words[w] |= mask
 }
 
-// Clear marks de absent.
-func (b *Bitmap) Clear(de int) {
+// clear marks de absent (engine-internal).
+func (b *Bitmap) clear(de int) {
 	if de < 1 || de > maxDEIndex {
 		return
 	}
@@ -76,9 +76,22 @@ func (b *Bitmap) Clear(de int) {
 // codecs that emit the raw wire form.
 func (b Bitmap) Word(i int) uint64 { return b.words[i] }
 
-// SetWord installs the i-th 64-bit word; for codecs reconstructing a Bitmap
-// from wire bytes.
-func (b *Bitmap) SetWord(i int, v uint64) { b.words[i] = v }
+// BitmapFromWords builds a Bitmap from its raw 64-bit words (index 0 = primary,
+// 1 = secondary, 2 = tertiary). It is the construction path for BitmapCodec
+// implementations that parse the wire form.
+func BitmapFromWords(words [3]uint64) Bitmap { return Bitmap{words: words} }
+
+// BitmapFor builds a Bitmap with the given data elements marked present. It is a
+// convenience constructor for codec authors and tests; for a live Message the
+// engine derives the wire bitmap from the present-field set at marshal time, so
+// application code never builds a Bitmap by hand.
+func BitmapFor(des ...int) Bitmap {
+	var b Bitmap
+	for _, de := range des {
+		b.set(de)
+	}
+	return b
+}
 
 // Count returns the number of present data elements, excluding the
 // continuation bits.
