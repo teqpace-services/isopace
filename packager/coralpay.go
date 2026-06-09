@@ -18,9 +18,9 @@ import (
 	"github.com/teqpace-services/isopace/iso8583"
 )
 
-// CoralPay is an ISO 8583:1987 profile for the CoralPay acquirer link, generated
-// field-for-field from the certified jPOS GenericPackager definition (fields2.xml)
-// used by the legacy switch-gateway. It reuses the postField/p* shorthands from
+// CoralPay is an ISO 8583:1987 profile for the CoralPay acquirer link — a
+// clean-room layout composed from public ISO 8583:1987 field semantics and
+// CoralPay's published field tables. It reuses the postField/p* shorthands from
 // postilion.go.
 func CoralPay() *iso8583.Schema {
 	sub := iso8583.NewSchema("coralpay-127").
