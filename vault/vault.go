@@ -21,25 +21,70 @@ import (
 // ErrUnknownKey is returned when an operation names a key the vault does not hold.
 var ErrUnknownKey = errors.New("vault: unknown key")
 
-// Vault is the key-management façade: operations name keys by reference rather
-// than passing key material, so the same calls work whether the keys live in
-// software ([SoftVault]) or in an HSM behind an adapter. A real HSM (e.g. via
-// PKCS#11) is a drop-in Vault implementation kept in a separate module so the
-// core stays stdlib-only.
-type Vault interface {
+// The key-management façade is composed from small capability interfaces so a
+// hardware adapter can implement exactly the operations its device supports.
+// Operations name keys by reference rather than passing key material, so the
+// same calls work whether the keys live in software ([SoftVault]) or in an HSM
+// behind an adapter (kept in a separate module so the core stays stdlib-only).
+//
+// A general-purpose PKCS#11 HSM typically provides [Macer] (and possibly
+// [PINEncryptor]); a payment HSM additionally provides [PINTranslator]. Callers
+// should depend on the narrowest capability they need and type-assert for it:
+//
+//	tr, ok := v.(vault.PINTranslator)
+//	if !ok { return errors.New("configured vault cannot translate PINs") }
+
+// PINEncryptor enciphers a CLEAR PIN into a PIN block under a device-resident
+// key. Because it takes the clear PIN, it is an issuer-side / trusted-context
+// operation (e.g. PIN issuance) — at an acquiring switch the clear PIN must
+// never be present, so a switch uses [PINTranslator] instead.
+type PINEncryptor interface {
 	// EncryptPINBlock encodes pin for the format and encrypts the 8-byte block
 	// under the named PIN key (3DES ECB).
 	EncryptPINBlock(keyRef string, format PINBlockFormat, pin, pan string) ([]byte, error)
-	// TranslatePIN decrypts an encrypted PIN block under srcRef, re-encodes it in
-	// dstFormat, and re-encrypts under dstRef — the classic switch PIN-translate.
+}
+
+// PINTranslator re-enciphers an ENCRYPTED PIN block from one key (and format) to
+// another — the classic acquirer/switch PIN-translate. The clear PIN does not
+// appear in this interface.
+//
+// Contract: a conforming hardware implementation MUST perform the translation
+// atomically inside the device so the clear PIN never leaves it (PCI PIN
+// Security). An adapter that cannot translate without exposing the clear PIN in
+// host memory (for example one limited to stock PKCS#11, which has no atomic
+// translate mechanism) MUST NOT implement this interface — callers rely on its
+// presence to mean the operation is PIN-secure.
+type PINTranslator interface {
+	// TranslatePIN re-enciphers encBlock from srcRef/srcFormat to dstRef/dstFormat.
 	TranslatePIN(srcRef, dstRef string, encBlock []byte, pan string, srcFormat, dstFormat PINBlockFormat) ([]byte, error)
+}
+
+// Macer generates and verifies message authentication codes under a
+// device-resident key; the key material never leaves the device.
+type Macer interface {
 	// GenerateMAC computes a MAC over data under the named key.
 	GenerateMAC(keyRef string, alg MACAlgorithm, pad Padding, data []byte) ([]byte, error)
 	// VerifyMAC verifies a MAC over data under the named key.
 	VerifyMAC(keyRef string, alg MACAlgorithm, pad Padding, data, mac []byte) (bool, error)
 }
 
-var _ Vault = (*SoftVault)(nil)
+// Vault is the full key-management façade: the composition of every capability,
+// implemented by the software backend ([SoftVault], [SealedVault]) and by
+// full-function payment HSM adapters. An adapter that supports only some
+// capabilities should expose those interface types ([Macer], etc.) rather than
+// the full Vault.
+type Vault interface {
+	PINEncryptor
+	PINTranslator
+	Macer
+}
+
+var (
+	_ Vault         = (*SoftVault)(nil)
+	_ PINEncryptor  = (*SoftVault)(nil)
+	_ PINTranslator = (*SoftVault)(nil)
+	_ Macer         = (*SoftVault)(nil)
+)
 
 // SoftVault is the in-process Vault: keys are held in memory and operations run
 // with the Go standard library. It is for development, testing, and conformance

@@ -7,11 +7,48 @@ the [versioning policy](https://teqpace-services.github.io/isopace/versioning/).
 
 ## [Unreleased]
 
+### Added
+
+- **`vault` capability interfaces** for HSM adapters. The `vault.Vault` façade is
+  now composed from `PINEncryptor`, `PINTranslator`, and `Macer`, so a hardware
+  adapter can implement exactly the operations its device supports — a
+  general-purpose PKCS#11 HSM provides `Macer` (and possibly `PINEncryptor`),
+  while a payment HSM additionally provides `PINTranslator`. `Vault` keeps the
+  same method set, so this is **source-compatible**. `PINTranslator` documents
+  the PCI PIN Security contract: a conforming hardware implementation must
+  re-encipher atomically inside the device so the clear PIN never leaves it, and
+  an adapter that cannot do so (e.g. stock PKCS#11) must not implement it.
+- **`adapters/pkcs11` — HSM-backed MAC via a PKCS#11 token.** The adapter now
+  implements `vault.Macer` (`GenerateMAC` / `VerifyMAC`) for ISO 9797-1
+  algorithm 1 (single-DES CBC-MAC) and algorithm 3 (ANSI X9.19 retail MAC),
+  composed from the token's 3DES primitives so the key never leaves the device.
+  The output is byte-for-byte identical to `vault.GenerateMAC`, **cross-checked
+  against a real token under SoftHSM2 in CI**. Per the `PINTranslator` contract
+  the type deliberately advertises **only** `Macer` — it does not implement PIN
+  translate (no PCI-secure stock-PKCS#11 mechanism exists) or PIN-block encrypt
+  (a clear-PIN, issuer-context operation). Separate cgo module; the core stays
+  stdlib-only.
+- **`adapters/payshield` — Thales payShield payment-HSM adapter (scaffold).** A
+  reference adapter that exposes a payShield over its host-command protocol as the
+  **full `vault.Vault`**: `vault.PINEncryptor` (issuer-context clear-PIN encrypt),
+  `vault.PINTranslator` (PCI-secure PIN translate — the operation a general-purpose
+  PKCS#11 HSM cannot do), and `vault.Macer` (ISO 9797-1 MAC). A payment HSM
+  performs every one of these inside the device, so the adapter satisfies the whole
+  façade. Keys are named by the device's LMK key token; the clear key never leaves
+  the device. Ships with an in-repo `Simulator` — a protocol **test double** whose
+  cryptography is the Isopace software vault — so the command flow (framing, command
+  building, response/error-code parsing, capability surface) is exercised end to end
+  in CI without hardware. **Scaffold:** the on-wire field layout is a simplified
+  stand-in for payShield's positional fields and it has not been validated against
+  real hardware/LMK schemes — pending device validation and security review (B1).
+  Separate, stdlib-only module.
+
 ## [1.0.0-rc.1] - 2026-06-09
 
 First release candidate for `v1.0.0`. This is an **interim, feedback-seeking
 tag under a "may still change" banner** — not the v1.0.0 contract itself. Per
-the [roadmap to v1](ROADMAP-to-v1.md), it deliberately **narrows** what v1 will
+the [roadmap to v1](https://github.com/teqpace-services/isopace/blob/main/ROADMAP-to-v1.md),
+it deliberately **narrows** what v1 will
 freeze and is published to gather integration feedback before the API freeze:
 
 - **Stable candidate — the core.** `iso8583`, `packager`, `fieldcodec`,
