@@ -21,7 +21,7 @@ building blocks needed to run a switch.
 ![License](https://img.shields.io/badge/license-AGPL--3.0%20%2F%20commercial-blue)
 ![Go](https://img.shields.io/badge/Go-1.26-00ADD8?logo=go&logoColor=white)
 ![Dependencies](https://img.shields.io/badge/dependencies-stdlib--only-success)
-![Status](https://img.shields.io/badge/status-v0.3.0%20·%20pre--1.0-orange)
+![Status](https://img.shields.io/badge/status-v1.0.0--rc.1-orange)
 </p>
 
 [Get started :material-rocket-launch:](getting-started.md){ .md-button .md-button--primary }
@@ -36,13 +36,16 @@ access, zero-copy decoding, a pluggable codec catalog, and goroutine-native
 concurrency. The module is **stdlib-only** — there is no third-party dependency
 anywhere in its graph.
 
-!!! warning "Pre-1.0 — `v0.3.0`, the acquirer-profiles release"
+!!! warning "`v1.0.0-rc.1` — first release candidate (interim, may still change)"
 
-    Feature-complete across the planned layers and tested under `-race`, but the
-    API may change between minor versions (see the
+    A feedback-seeking tag under a "may still change" banner — **not the v1.0.0
+    contract yet** (see the [roadmap to v1](https://github.com/teqpace-services/isopace/blob/main/ROADMAP-to-v1.md)).
+    It narrows what v1 will freeze: the **core** (`iso8583`, `packager`,
+    `fieldcodec`, `lengthcodec`, `render`) is a stability candidate; the
+    **higher layers** remain experimental until they soak (see the
     [versioning policy](versioning.md)). The software `Vault` backend is for
     development and testing — **production PIN and key handling require a
-    certified HSM.**
+    certified HSM, which is not yet shipped.**
 
 ## Why Isopace
 

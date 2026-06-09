@@ -7,6 +7,37 @@ the [versioning policy](https://teqpace-services.github.io/isopace/versioning/).
 
 ## [Unreleased]
 
+## [1.0.0-rc.1] - 2026-06-09
+
+First release candidate for `v1.0.0`. This is an **interim, feedback-seeking
+tag under a "may still change" banner** — not the v1.0.0 contract itself. Per
+the [roadmap to v1](ROADMAP-to-v1.md), it deliberately **narrows** what v1 will
+freeze and is published to gather integration feedback before the API freeze:
+
+- **Stable candidate — the core.** `iso8583`, `packager`, `fieldcodec`,
+  `lengthcodec`, and `render` are proposed for the v1 API freeze. Feedback is
+  solicited against these surfaces specifically.
+- **Experimental — may still change.** The higher layers (`runtime`, `flow`,
+  `space`, `store`, `mux`, `link`, `listener`, `connector`, `gateway`, `teq`,
+  `vault`, `rbac`, `ops`) remain explicitly experimental and are **not** covered
+  by the rc's stability intent until they have soaked.
+- **Production crypto (HSM) is not yet shipped.** The only `vault` backends are
+  software (`SoftVault`, `SealedVault`); the certified-HSM / PKCS#11 path
+  (roadmap B1) is outstanding. Do not treat the crypto path as production-ready.
+
+No code change since `0.3.0` in the root module; the OpenTelemetry and SQL
+adapters ship as separate modules (`adapters/otel`, `adapters/sql`) so the core
+dependency graph stays empty. Still **stdlib-only**; every package is
+`gofmt`/`go vet` clean and tested under `go test -race`.
+
+### Added
+
+- **`adapters/otel/` and `adapters/sql/`** — the first production integrations as
+  standalone modules (each its own `go.mod`): a `runtime.Observer` over the
+  OpenTelemetry SDK, and a `store.Store` over `database/sql` (driver chosen by the
+  integrator, so none enters the core graph). The root module remains
+  dependency-free.
+
 ### Changed
 
 - **Docs:** corrected the `CoralPay` / `Zone` profile descriptions to state their
@@ -184,7 +215,8 @@ tested under `go test -race`.
   authenticates in constant time; expose it only behind appropriate network
   controls.
 
-[Unreleased]: https://github.com/teqpace-services/isopace/compare/v0.3.0...HEAD
+[Unreleased]: https://github.com/teqpace-services/isopace/compare/v1.0.0-rc.1...HEAD
+[1.0.0-rc.1]: https://github.com/teqpace-services/isopace/compare/v0.3.0...v1.0.0-rc.1
 [0.3.0]: https://github.com/teqpace-services/isopace/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/teqpace-services/isopace/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/teqpace-services/isopace/releases/tag/v0.1.0

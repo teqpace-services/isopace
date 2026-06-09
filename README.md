@@ -9,14 +9,16 @@ It is an independent, clean-room implementation in the spirit of
 zero-copy decoding, a pluggable codec catalog, and goroutine-native concurrency.
 The module is **stdlib-only** — no third-party dependency in the module graph.
 
-> **Status: `v0.3.0` — acquirer-profiles release.** Adds the `CoralPay` and
-> `Zone` ISO 8583:1987 switch profiles (each a clean-room layout composed from
-> public ISO 8583:1987 field semantics), a prefix-keyed SHA-256 message MAC, and a
-> fixed-width `tlv` codec. Feature-complete across the planned layers and tested
-> under `-race`, but pre-1.0: the API may change between minor versions (see
-> [`docs/versioning.md`](docs/versioning.md)). The software `Vault` backend is
-> for development/testing — production PIN and key handling require a certified
-> HSM.
+> **Status: `v1.0.0-rc.1` — first release candidate.** An **interim,
+> feedback-seeking** tag under a "may still change" banner — not the v1.0.0
+> contract yet (see the [roadmap to v1](ROADMAP-to-v1.md)). It narrows what v1
+> will freeze: the **core** — `iso8583`, `packager`, `fieldcodec`,
+> `lengthcodec`, `render` — is a stability candidate and the surface we want
+> feedback on; the **higher layers** (`runtime`, `flow`, `space`, `store`,
+> transport, `gateway`, `teq`, `vault`, `rbac`, `ops`) remain **experimental**
+> until they soak. The software `Vault` backend is for development/testing —
+> **production PIN and key handling require a certified HSM, which is not yet
+> shipped.** Still stdlib-only; tested under `-race`.
 
 A product of **[Teqpace Services Ltd.](https://teqpace.com)**
 
