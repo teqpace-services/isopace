@@ -7,6 +7,30 @@ the [versioning policy](https://teqpace-services.github.io/isopace/versioning/).
 
 ## [Unreleased]
 
+## [1.0.0] - 2026-06-17
+
+The first **stable** release. With the release-candidate soak complete, the
+**core** ISO 8583 surface is now **frozen under [Semantic Versioning](https://semver.org/spec/v2.0.0.html)**;
+the higher layers and the production-crypto (HSM) path ship alongside it but
+remain **preview** and are explicitly **not** covered by the v1 stability
+guarantee:
+
+- **Stable — frozen.** `iso8583`, `packager`, `fieldcodec`, `lengthcodec`, and
+  `render` are the v1 API contract. Breaking changes to these now require a
+  major-version bump. This surface soaked through `v1.0.0-rc.1` in production.
+- **Experimental — may still change.** The higher layers (`runtime`, `flow`,
+  `space`, `store`, `mux`, `link`, `listener`, `connector`, `gateway`, `teq`,
+  `vault`, `rbac`, `ops`) ship but are **not** yet covered by the stability
+  guarantee and may change in a minor release until they soak.
+- **Preview — production crypto (HSM).** The HSM path (roadmap B1) ships for the
+  first time: `vault` capability interfaces plus the `adapters/pkcs11` and
+  `adapters/payshield` modules. The PKCS#11 MAC path is cross-checked against a
+  real token under SoftHSM2 in CI; **`adapters/payshield` is a scaffold
+  validated only against an in-repo simulator — not against real payShield
+  hardware or LMK key schemes — and is pending device validation and security
+  review.** Software vault backends remain development/testing only; production
+  PIN and key handling require a certified HSM.
+
 ### Added
 
 - **`vault` capability interfaces** for HSM adapters. The `vault.Vault` façade is
@@ -252,7 +276,8 @@ tested under `go test -race`.
   authenticates in constant time; expose it only behind appropriate network
   controls.
 
-[Unreleased]: https://github.com/teqpace-services/isopace/compare/v1.0.0-rc.1...HEAD
+[Unreleased]: https://github.com/teqpace-services/isopace/compare/v1.0.0...HEAD
+[1.0.0]: https://github.com/teqpace-services/isopace/compare/v1.0.0-rc.1...v1.0.0
 [1.0.0-rc.1]: https://github.com/teqpace-services/isopace/compare/v0.3.0...v1.0.0-rc.1
 [0.3.0]: https://github.com/teqpace-services/isopace/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/teqpace-services/isopace/compare/v0.1.0...v0.2.0

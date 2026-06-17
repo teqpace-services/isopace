@@ -9,16 +9,18 @@ It is an independent, clean-room implementation in the spirit of
 zero-copy decoding, a pluggable codec catalog, and goroutine-native concurrency.
 The module is **stdlib-only** — no third-party dependency in the module graph.
 
-> **Status: `v1.0.0-rc.1` — first release candidate.** An **interim,
-> feedback-seeking** tag under a "may still change" banner — not the v1.0.0
-> contract yet (see the [roadmap to v1](ROADMAP-to-v1.md)). It narrows what v1
-> will freeze: the **core** — `iso8583`, `packager`, `fieldcodec`,
-> `lengthcodec`, `render` — is a stability candidate and the surface we want
-> feedback on; the **higher layers** (`runtime`, `flow`, `space`, `store`,
-> transport, `gateway`, `teq`, `vault`, `rbac`, `ops`) remain **experimental**
-> until they soak. The software `Vault` backend is for development/testing —
-> **production PIN and key handling require a certified HSM, which is not yet
-> shipped.** Still stdlib-only; tested under `-race`.
+> **Status: `v1.0.0` — first stable release.** The **core** — `iso8583`,
+> `packager`, `fieldcodec`, `lengthcodec`, `render` — is now **frozen under
+> [SemVer](https://semver.org/spec/v2.0.0.html)**; breaking changes there
+> require a major bump. The **higher layers** (`runtime`, `flow`, `space`,
+> `store`, transport, `gateway`, `teq`, `vault`, `rbac`, `ops`) ship but remain
+> **experimental** until they soak. The production-crypto (HSM) path ships as
+> **preview**: `adapters/pkcs11` (MAC, CI-cross-checked under SoftHSM2) and
+> `adapters/payshield` (a **scaffold** validated only against an in-repo
+> simulator — **not** real payShield hardware — pending device validation and
+> security review). The software `Vault` backend is for development/testing —
+> **production PIN and key handling require a certified HSM.** Still stdlib-only;
+> tested under `-race`.
 
 A product of **[Teqpace Services Ltd.](https://teqpace.com)**
 
