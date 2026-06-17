@@ -25,7 +25,7 @@ This synthesis is built around four hard requirements distilled from the design 
 - [6. FieldCodec / LengthCodec Registry & Catalog](#6-fieldcodec--lengthcodec-registry--catalog)
 - [7. Packager Profiles](#7-packager-profiles)
 - [8. Alternate Renderings (View)](#8-alternate-renderings-view)
-- [9. How This Beats jPOS](#9-how-this-beats-jpos)
+- [9. How Isopace differs from jPOS](#9-how-isopace-differs-from-jpos)
 
 ---
 
@@ -967,7 +967,12 @@ The **same `*Message`** round-trips through every backend: `Codec.Marshal` → I
 
 ---
 
-## 9. How This Beats jPOS
+## 9. How Isopace differs from jPOS
+
+> Isopace is an independent, clean-room implementation and is **not affiliated
+> with, endorsed by, or derived from** the jPOS project. "jPOS" is a trademark of
+> its respective owner; the comparisons below are technical and offered for
+> design and interoperability context only.
 
 **1. Type-safe access instead of a stringly-typed mutable `Map<Integer,ISOComponent>`.**
 jPOS hands you `msg.getString(4)` (a `String` you must parse) and `getComponent(4)` (an `ISOComponent` you downcast), with mistakes surfacing as runtime `ClassCastException`/`NumberFormatException`. Isopace gives `Get[iso8583.Decimal](m, 4)` and tag-bound structs (`Amount iso8583.Decimal \`iso:"4"\``): the type is known at compile time, money is exact fixed-point (never a float or a re-parsed string), and a mismatch is a generic-constraint error or a structured `FieldError` carrying `Path` + `Offset`. The 90% developer never casts.
