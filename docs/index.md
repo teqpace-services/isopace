@@ -21,7 +21,7 @@ building blocks needed to run a switch.
 ![License](https://img.shields.io/badge/license-AGPL--3.0%20%2F%20commercial-blue)
 ![Go](https://img.shields.io/badge/Go-1.26-00ADD8?logo=go&logoColor=white)
 ![Dependencies](https://img.shields.io/badge/dependencies-stdlib--only-success)
-![Status](https://img.shields.io/badge/status-v1.0.0--rc.1-orange)
+![Status](https://img.shields.io/badge/status-v1.0.0-success)
 </p>
 
 [Get started :material-rocket-launch:](getting-started.md){ .md-button .md-button--primary }
@@ -36,16 +36,17 @@ access, zero-copy decoding, a pluggable codec catalog, and goroutine-native
 concurrency. The module is **stdlib-only** — there is no third-party dependency
 anywhere in its graph.
 
-!!! warning "`v1.0.0-rc.1` — first release candidate (interim, may still change)"
+!!! note "`v1.0.0` — first stable release"
 
-    A feedback-seeking tag under a "may still change" banner — **not the v1.0.0
-    contract yet** (see the [roadmap to v1](https://github.com/teqpace-services/isopace/blob/main/ROADMAP-to-v1.md)).
-    It narrows what v1 will freeze: the **core** (`iso8583`, `packager`,
-    `fieldcodec`, `lengthcodec`, `render`) is a stability candidate; the
-    **higher layers** remain experimental until they soak (see the
-    [versioning policy](versioning.md)). The software `Vault` backend is for
-    development and testing — **production PIN and key handling require a
-    certified HSM, which is not yet shipped.**
+    The **core** (`iso8583`, `packager`, `fieldcodec`, `lengthcodec`, `render`)
+    is now **frozen under SemVer** — breaking changes there require a major bump
+    (see the [versioning policy](versioning.md)). The **higher layers** ship but
+    remain experimental until they soak. The production-crypto (HSM) path ships
+    as **preview**: `adapters/pkcs11` (MAC, CI-cross-checked under SoftHSM2) and
+    `adapters/payshield` (a **scaffold** validated only against an in-repo
+    simulator — **not** real payShield hardware — pending device validation and
+    security review). The software `Vault` backend is for development and
+    testing — **production PIN and key handling require a certified HSM.**
 
 ## Why Isopace
 
