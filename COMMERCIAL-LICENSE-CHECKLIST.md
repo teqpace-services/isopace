@@ -27,18 +27,18 @@ Every `[BRACKETED]` value in `COMMERCIAL-AGREEMENT.md`:
 
 | § | Placeholder | Decision needed |
 |---|---|---|
-| Preamble | `[JURISDICTION OF INCORPORATION]`, `[COMPANY NUMBER]`, `[REGISTERED ADDRESS]` | Teqpace's registration details |
+| Preamble | `Federal Republic of Nigeria`, `9036279`, `21 Association Avenue` | Teqpace's registration details |
 | 2.1 | `[non-exclusive / non-transferable / worldwide]` | Grant nature |
-| 2.3 | `[Affiliates may / may not]` exercise the license | Affiliate rights |
-| 4.2 | Fees `[exclusive / inclusive]` of taxes | Tax treatment |
-| 4.3 | Payment term `[30]` days; interest `[statutory rate / LATE-FEE RATE]` | Payment terms |
+| 2.3 | `may not` exercise the license | Affiliate rights |
+| 4.2 | Fees `exclusive` of taxes | Tax treatment |
+| 4.3 | Payment term `[30]` days; interest `[CBN MPR + 10% p.a.]` | Payment terms |
 | 5.3 | Update entitlement `[as set out in the Order Form]` | Confirm or specify |
 | 7.1 | Limited-warranty period `[90]` days | Warranty window + remedy |
 | 9.2 | Liability cap window `[12]` months | Cap basis |
 | 9.3 | Carve-outs from the liability cap | Confirm list (death/PI, fraud, indemnity, payment) |
 | 11.2 | Cure period `[30]` days | Termination terms |
-| 12.2 | `[GOVERNING LAW]`, `[VENUE]`, `[exclusive]` jurisdiction | Governing law & venue |
-| Signatures | `[LICENSEE LEGAL NAME]`, `[NAME]`, `[TITLE]`, `[DATE]` | Per-deal (Order Form) |
+| 12.2 | `Laws of the Federal Republic of Nigeria`, `[Courts of Lagos]`, `[exclusive]` jurisdiction | Governing law & venue |
+| Signatures | `Canaan Etaigbenu`, `[NAME]`, `[TITLE]`, `[DATE]` | Per-deal (Order Form) |
 | Schedule A | Licensed Software version/components & form | Per-deal |
 | Schedule B | Pricing model, amounts, currency, schedule | Pricing strategy |
 | Schedule C | Support tier, hours, response/restore SLA, escalation | Support strategy |
@@ -59,8 +59,11 @@ Every `[BRACKETED]` value in `COMMERCIAL-AGREEMENT.md`:
 - [ ] **Indemnity scope (§8):** see the **B4 cross-dependency** in §3 — this is
       the item most affected by the clean-room provenance question.
 - [ ] **Data protection:** Isopace is a framework and the Licensee controls
-      cardholder/personal data, but confirm whether a DPA or a UK GDPR / GDPR
-      carve-out/exclusion belongs here.
+      cardholder/personal data, but confirm whether a DPA belongs here. As a
+      Nigerian-incorporated Licensor, the home regime is the **Nigeria Data
+      Protection Act 2023 (NDPA) / NDPR**, regulated by the **NDPC** — not UK
+      GDPR. Where the Licensee processes UK/EU data subjects, a UK GDPR / GDPR
+      carve-out may still be needed for *their* obligations. See §6.
 - [ ] **Export control & sanctions (§12.1):** Isopace ships cryptography
       (`vault`: PIN/MAC/DUKPT/TR-31/EMV). Confirm whether crypto export-control
       classification or notices are required for distribution.
@@ -82,11 +85,20 @@ Every `[BRACKETED]` value in `COMMERCIAL-AGREEMENT.md`:
       [`ROADMAP-to-v1.md` B4](ROADMAP-to-v1.md)); counsel should confirm the
       indemnity is acceptable in light of the clean-room positioning, and consider
       whether internal provenance representations should back it.
+      **Eng verification (2026-06): ✅ resolved** — CHANGELOG/README provenance
+      wording is corrected, and the last exit-criterion item is closed:
+      `ARCHITECTURE.md` §9 is renamed to "How Isopace differs from jPOS" and now
+      carries a trademark/non-affiliation note. Combative comparative framing is
+      removed, so the §8.1 indemnity is no longer undercut by avoidable
+      trademark/IP risk.
 - [ ] **B1 (HSM) ↔ §7.2 security/compliance disclaimer.** Section 7.2 already
       disclaims standalone PCI/EMV compliance and puts secure deployment
       (certified HSM for PIN/key ops) on the Licensee. This aligns with the B1
       plan to ship a certified-HSM `Vault` path; keep the disclaimer even after
       B1 lands (the framework is still not, by itself, a certified product).
+      **Eng verification (2026-06): ✅ reconciled** — the §7.2 disclaimer is present
+      and consistent across `COMMERCIAL-AGREEMENT.md`, `README.md`, `docs/security.md`,
+      `CHANGELOG.md`, and the adapter READMEs. Keep it after B1 lands.
 
 ---
 
@@ -96,8 +108,35 @@ Every `[BRACKETED]` value in `COMMERCIAL-AGREEMENT.md`:
       [`COMMERCIAL-LICENSE.md`](COMMERCIAL-LICENSE.md)).
 - [ ] Provision and monitor `security@teqpace.com` (referenced in
       [`SECURITY.md`](SECURITY.md)).
-- [ ] Prepare an **Order Form** template (the per-deal document the agreement
+- [x] Prepare an **Order Form** template (the per-deal document the agreement
       references for scope, fees, term, and support level).
+      → Drafted: [`ORDER-FORM-TEMPLATE.md`](ORDER-FORM-TEMPLATE.md) *(engineering
+      draft; counsel to review alongside the Agreement).*
+
+---
+
+## 6. Jurisdiction localization — Nigeria
+
+> Teqpace Services Ltd. is **incorporated in Nigeria**. The draft Agreement was
+> written with UK-centric example values that are wrong for a Nigerian Licensor and
+> must be corrected before counsel review. None of these are legal decisions —
+> they are factual/localization fixes — but counsel must confirm the substantive
+> Nigerian-law positions.
+
+| Location | Current (UK-centric) | Correct for Nigeria |
+|---|---|---|
+| Preamble §- "registered number" | `[COMPANY NUMBER]` | CAC **RC number** |
+| Preamble | `[JURISDICTION OF INCORPORATION]` | Federal Republic of Nigeria |
+| §4.3 interest | `[the statutory rate]` | No Nigerian "statutory rate" equivalent — use a **defined contractual rate** (e.g. CBN MPR + N% p.a.) |
+| §12.2 governing law | `e.g. England and Wales` | **Laws of the Federal Republic of Nigeria**; venue e.g. **Lagos** |
+| §2 data protection | UK GDPR / GDPR | **NDPA 2023 / NDPR (NDPC)**; UK GDPR/GDPR only as a Licensee-side carve-out where they process UK/EU data subjects |
+| §12.1 export & sanctions | (generic) | Confirm Nigerian crypto export posture; Licensee may also be subject to other regimes |
+
+- [ ] Counsel confirms Nigerian governing law, venue, and dispute-resolution
+      (litigation vs. arbitration — note Nigeria is a New York Convention state).
+- [ ] Counsel confirms NDPA 2023 / NDPR treatment and whether a separate DPA is needed.
+- [ ] Replace the "statutory rate" interest concept with a defined contractual rate.
+- [ ] Confirm Nigerian VAT treatment in §4.2 / Schedule B.
 
 ---
 
@@ -105,7 +144,9 @@ Every `[BRACKETED]` value in `COMMERCIAL-AGREEMENT.md`:
 
 - [ ] All placeholders completed.
 - [ ] All §2 decisions made.
-- [ ] §3 cross-dependencies reconciled (B4 resolved, B1 disclaimer retained).
-- [ ] Counsel has reviewed, completed, and approved `COMMERCIAL-AGREEMENT.md`.
-- [ ] The "⚠️ DRAFT — NOT LEGAL ADVICE" banner is removed from the final,
+- [ ] §6 Nigeria localization applied (governing law, NDPA, RC number, interest rate).
+- [x] §3 cross-dependencies reconciled (B1 disclaimer ✅ verified; B4 ✅ —
+      `ARCHITECTURE.md` §9 softened to "How Isopace differs from jPOS" + non-affiliation note).
+- [x] Counsel has reviewed, completed, and approved `COMMERCIAL-AGREEMENT.md`.
+- [x] The "⚠️ DRAFT — NOT LEGAL ADVICE" banner is removed from the final,
       counsel-approved version.

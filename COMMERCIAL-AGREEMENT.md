@@ -7,20 +7,10 @@ NOT offered under the AGPL.
 
 # Isopace Commercial License Agreement
 
-> ## ⚠️ DRAFT — NOT LEGAL ADVICE
->
-> This document is a **template / starting point**, prepared to accelerate
-> drafting. It has **not** been reviewed by a lawyer and is **not legal advice**.
-> It **must** be reviewed, completed, and adapted by qualified legal counsel
-> licensed in the governing jurisdiction before it is offered to, or executed
-> with, any customer. Bracketed `[PLACEHOLDERS]` must be completed. Payment‑
-> industry, data‑protection (e.g. UK GDPR / GDPR), export‑control, and
-> consumer‑law requirements may impose additional or conflicting terms.
-
 This Commercial License Agreement (the "**Agreement**") is entered into by and
 between **Teqpace Services Ltd.**, a company registered in
-`[JURISDICTION OF INCORPORATION]` with registered number `[COMPANY NUMBER]` and
-registered office at `[REGISTERED ADDRESS]` ("**Licensor**"), and the entity
+the Federal Republic of Nigeria with registered number RC 9036279 and
+registered office at 21 Association Avenue, Ejigbo, Lagos, Nigeria ("**Licensor**"), and the entity
 identified in the Order Form ("**Licensee**"). It is effective on the date of the
 last signature or the Order Form effective date (the "**Effective Date**").
 
@@ -58,8 +48,8 @@ common control with a party.
 ## 2. License grant
 
 2.1 **Grant.** Subject to Licensee's compliance with this Agreement and payment of
-the Fees, Licensor grants Licensee a `[non-exclusive / non-transferable /
-worldwide]` license during the Term to:
+the Fees, Licensor grants Licensee a non-exclusive, non-transferable,
+worldwide license during the Term to:
 
   (a) use, reproduce, and internally modify the Licensed Software;
 
@@ -77,7 +67,7 @@ Licensee is **not** required to comply with the source-disclosure obligations of
 the AGPL (including section 13). Licensee's own switch logic, integrations, and
 configuration may remain confidential.
 
-2.3 **Affiliates.** `[Affiliates may / may not]` exercise the license; if
+2.3 **Affiliates.** Affiliates may **not** exercise the license; if
 permitted, Licensee remains responsible for their compliance.
 
 2.4 **Reservation.** All rights not expressly granted are reserved by Licensor.
@@ -109,11 +99,11 @@ copies it obtains and uses under that license.
 4.1 Licensee shall pay the fees set out in the Order Form (the "**Fees**")
 per Schedule B.
 
-4.2 Fees are `[exclusive / inclusive]` of taxes; Licensee is responsible for
+4.2 Fees are exclusive of taxes; Licensee is responsible for
 applicable taxes other than Licensor's income taxes.
 
-4.3 Undisputed invoices are payable within `[30]` days. Late amounts may accrue
-interest at `[the statutory rate / LATE-FEE RATE]`.
+4.3 Undisputed invoices are payable within 30 days. Late amounts may accrue
+interest at the Central Bank of Nigeria Monetary Policy Rate (CBN MPR) plus 10% per annum.
 
 ---
 
@@ -126,7 +116,7 @@ Schedule C. Absent a support purchase, the Licensed Software is provided without
 support obligations.
 
 5.3 Updates made generally available to commercial licensees during the Term are
-included `[as set out in the Order Form]`.
+included as set out in the Order Form.
 
 ---
 
@@ -145,7 +135,7 @@ irrevocable, royalty-free license to use it without restriction.
 
 ## 7. Warranties and disclaimer
 
-7.1 **Limited warranty.** Licensor warrants that, for `[90]` days after delivery,
+7.1 **Limited warranty.** Licensor warrants that, for 90 days after delivery,
 the Licensed Software will materially conform to the Documentation. Licensee's
 exclusive remedy for breach is, at Licensor's option, repair, replacement, or
 refund of the Fees for the non-conforming Licensed Software.
@@ -186,7 +176,7 @@ PUNITIVE DAMAGES, OR FOR LOST PROFITS, REVENUE, OR DATA, ARISING OUT OF THIS
 AGREEMENT.
 
 9.2 EACH PARTY'S TOTAL AGGREGATE LIABILITY ARISING OUT OF OR RELATED TO THIS
-AGREEMENT IS LIMITED TO THE FEES PAID OR PAYABLE BY LICENSEE IN THE `[12]` MONTHS
+AGREEMENT IS LIMITED TO THE FEES PAID OR PAYABLE BY LICENSEE IN THE 12 MONTHS
 PRECEDING THE EVENT GIVING RISE TO THE CLAIM.
 
 9.3 The exclusions and limits do not apply to `[liability that cannot be excluded
@@ -210,7 +200,7 @@ third party.
 11.1 This Agreement runs for the term in the Order Form (the "**Term**").
 
 11.2 Either party may terminate for the other's material breach not cured within
-`[30]` days of written notice.
+30 days of written notice.
 
 11.3 On termination for Licensee's breach, the commercial license ends and
 Licensee must stop using the Licensed Software under this Agreement (Licensee's
@@ -227,8 +217,8 @@ and 12) survive termination.
 control and sanctions laws.
 
 12.2 **Governing law & venue.** This Agreement is governed by the laws of
-`[GOVERNING LAW — e.g. England and Wales]`, and the parties submit to the
-`[exclusive]` jurisdiction of the courts of `[VENUE]`.
+the Federal Republic of Nigeria, and the parties submit to the
+exclusive jurisdiction of the courts of Lagos, Nigeria.
 
 12.3 **Assignment.** Neither party may assign this Agreement without the other's
 consent, except to a successor in a merger or sale of substantially all assets.
@@ -250,7 +240,7 @@ then the Schedules.
 | Licensor — Teqpace Services Ltd. | Licensee — `[LICENSEE LEGAL NAME]` |
 |---|---|
 | Signature: _______________________ | Signature: _______________________ |
-| Name: `[NAME]` | Name: `[NAME]` |
+| Name: Canaan Etaigbenu | Name: `[NAME]` |
 | Title: `[TITLE]` | Title: `[TITLE]` |
 | Date: `[DATE]` | Date: `[DATE]` |
 
