@@ -245,7 +245,7 @@ prefix-keyed SHA-256 message hash used by some acquirer links (e.g. CoralPay).
 
 ## rbac, store & ops — enterprise & ops { #rbac-store-ops }
 
-The operational layer that turns the framework into a deployable service.
+The operational layer that turns Isopace into a deployable service.
 
 - `rbac` — role-based access control with PBKDF2 authentication.
 - `store` — persistence.

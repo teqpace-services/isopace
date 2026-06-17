@@ -38,7 +38,7 @@ go run ./examples/acquirer -addr 127.0.0.1:8583 -n 5 -amount 2500
 
 ### Simulator / test host
 
-The `simulator` assembles a small switch from the framework's building blocks: a
+The `simulator` assembles a small switch from the package's building blocks: a
 `runtime.Host` supervises an ISO-8583 listener and an admin HTTP endpoint, with
 the metrics registry wired in as the runtime observer.
 

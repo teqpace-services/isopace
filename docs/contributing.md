@@ -53,7 +53,7 @@ Every source file must begin with the SPDX dual-license header (Go shown):
 //
 // Copyright (C) 2026 Teqpace Services Ltd.
 //
-// This file is part of Isopace, a financial transaction framework.
+// This file is part of Isopace, a financial transaction package.
 //
 // Isopace is dual-licensed:
 //   - under the GNU Affero General Public License v3.0 or later (see LICENSE); or

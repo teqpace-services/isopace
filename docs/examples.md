@@ -9,7 +9,7 @@ description: >-
 
 Isopace ships a set of runnable programs under
 [`examples/`](https://github.com/teqpace-services/isopace/tree/main/examples)
-that assemble the framework's building blocks into working switches and demos.
+that assemble the package's building blocks into working switches and demos.
 Each is small enough to read end-to-end. None require anything beyond the Go
 toolchain — Isopace is stdlib-only.
 
@@ -64,7 +64,7 @@ The two programs implement a tiny acquirer ↔ issuer authorization flow over TC
 
 ## simulator
 
-The `simulator` assembles a small switch from the framework's building blocks: a
+The `simulator` assembles a small switch from the package's building blocks: a
 `runtime.Host` supervises an ISO-8583 listener and an admin HTTP endpoint, with
 the metrics registry wired in as the runtime observer.
 

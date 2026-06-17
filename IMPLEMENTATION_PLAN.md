@@ -370,7 +370,7 @@ The dependency-free heart. Built in slices so each compiles and tests green.
 | 🟢 | SemVer policy + `CHANGELOG.md` | `docs/versioning.md`, `CHANGELOG.md` |
 | 🟢 | Tag `v0.1.0` + GitHub release | annotated tag pushed and release published at `v0.1.0` |
 
-> **Done:** the framework is assembled into runnable programs — an `issuer` host
+> **Done:** Isopace is assembled into runnable programs — an `issuer` host
 > and an `acquirer` client over a real switch, plus a `simulator` test host built
 > from `runtime.Host` supervising an ISO-8583 listener and an ops admin endpoint
 > (`/healthz`, `/readyz`, `/metrics`) with metrics wired through
