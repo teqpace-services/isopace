@@ -1,6 +1,6 @@
 # Isopace
 
-**Isopace** is a financial transaction framework for Go — ISO-8583 messaging and
+**Isopace** is a financial transaction package for Go — ISO-8583 messaging and
 payment switching, plus the runtime, transaction pipeline, coordination, and
 security building blocks needed to run a switch.
 

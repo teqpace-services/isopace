@@ -1,7 +1,7 @@
 ---
 title: Isopace — ISO-8583 & payment switching for Go
 description: >-
-  A stdlib-only ISO-8583 messaging and payment-switching framework for Go:
+  A stdlib-only ISO-8583 messaging and payment-switching package for Go:
   type-safe field access, zero-copy decode, a pluggable codec catalog, and
   goroutine-native concurrency.
 hide:
@@ -12,7 +12,7 @@ hide:
 # Isopace
 
 <p class="hero-tagline" markdown>
-**A financial transaction framework for Go** — ISO-8583 messaging and payment
+**A financial transaction package for Go** — ISO-8583 messaging and payment
 switching, plus the runtime, transaction pipeline, coordination, and security
 building blocks needed to run a switch.
 </p>
@@ -145,7 +145,7 @@ stan, _ := iso8583.Get[int64](got, 11)
 
 ## The stack
 
-The framework is layered with a strict one-directional dependency rule: the core
+The packages are layered with a strict one-directional dependency rule: the core
 model knows the wire format only through the `*Schema` it references, and every
 renderer consumes one read-only `View`.
 

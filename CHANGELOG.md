@@ -207,7 +207,7 @@ package is `gofmt`/`go vet` clean and tested under `go test -race`.
 
 ## [0.1.0] - 2026-06-01
 
-First tagged release. A feature-complete, clean-room Go framework for ISO-8583
+First tagged release. A feature-complete, clean-room Go package for ISO-8583
 messaging and payment switching. The module is **stdlib-only** — no third-party
 dependency in the module graph — and every package is `gofmt`/`go vet` clean and
 tested under `go test -race`.
