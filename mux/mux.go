@@ -42,9 +42,16 @@ var (
 // and its response must match.
 type Keyer func(msg []byte) (string, error)
 
+// Reply sends an answer to an unsolicited frame back over the same link. It is
+// handed to an [WithUnsolicitedReplier] handler so a peer-initiated request — an
+// echo test, a sign-off, a server-initiated advice — can be answered.
+type Reply func(msg []byte) error
+
 type config struct {
 	timeout     time.Duration
 	unsolicited func([]byte)
+	replier     func([]byte, Reply)
+	respKey     Keyer
 }
 
 // Option configures a Mux.
@@ -56,9 +63,41 @@ func WithTimeout(d time.Duration) Option { return func(c *config) { c.timeout = 
 // WithUnsolicitedHandler sets a handler for frames that match no in-flight
 // request (server-initiated requests, late responses). It runs on the reader
 // goroutine, so it must not block.
+//
+// Use [WithUnsolicitedReplier] instead when the handler needs to ANSWER the frame:
+// a peer that echo-tests us and never receives a reply concludes the link is dead
+// and tears it down.
 func WithUnsolicitedHandler(h func([]byte)) Option {
 	return func(c *config) { c.unsolicited = h }
 }
+
+// WithUnsolicitedReplier sets an unsolicited handler that can answer the frame, via
+// the [Reply] it is given. It takes precedence over [WithUnsolicitedHandler].
+//
+// Like the plain handler it runs on the reader goroutine and must not block — but
+// a reply is a single non-blocking write to the link, so answering inline is the
+// intended use. Anything slower belongs on a queue.
+func WithUnsolicitedReplier(h func(frame []byte, reply Reply)) Option {
+	return func(c *config) { c.replier = h }
+}
+
+// WithResponseKeyer sets a SEPARATE keyer for inbound frames, leaving the Keyer
+// passed to [New] to key outgoing requests only. Without it one function keys both
+// directions, and then no keyer can both match a response to its request and tell a
+// PEER's request apart from our own — the two are structurally identical.
+//
+// That ambiguity is not theoretical. Network-management traffic correlates on the
+// trace number alone (an 0800 echo carries no terminal id), so a peer-originated
+// 0800 whose trace happens to match one we have in flight is delivered to us as
+// though it were the 0810 answer, and the real answer then arrives unmatched.
+//
+// With both keyers the caller resolves it by keying on the message type as well as
+// the trace: the request keyer maps an outgoing frame to the key of the response it
+// EXPECTS, and the response keyer maps an inbound frame by its OWN type. Our 0800
+// registers under "0810:<trace>", the real 0810 matches it, and a peer's 0800 keys
+// to "0800:<trace>" — no match, so it reaches the unsolicited handler where it
+// belongs.
+func WithResponseKeyer(k Keyer) Option { return func(c *config) { c.respKey = k } }
 
 // Mux correlates requests and responses over a link.
 type Mux struct {
@@ -137,7 +176,7 @@ func (m *Mux) readLoop() {
 			m.fail(err)
 			return
 		}
-		k, kerr := m.key(msg)
+		k, kerr := m.responseKey(msg)
 		if kerr != nil {
 			m.deliverUnsolicited(msg)
 			continue
@@ -156,10 +195,38 @@ func (m *Mux) readLoop() {
 	}
 }
 
+// responseKey keys an INBOUND frame, using the response keyer when one is set and
+// otherwise the request keyer (the single-keyer behaviour).
+func (m *Mux) responseKey(msg []byte) (string, error) {
+	if m.cfg.respKey != nil {
+		return m.cfg.respKey(msg)
+	}
+	return m.key(msg)
+}
+
 func (m *Mux) deliverUnsolicited(msg []byte) {
+	if m.cfg.replier != nil {
+		m.cfg.replier(msg, m.Send)
+		return
+	}
 	if m.cfg.unsolicited != nil {
 		m.cfg.unsolicited(msg)
 	}
+}
+
+// Send writes msg to the link WITHOUT registering a correlation or waiting for a
+// response. It is how a peer-initiated frame is answered — an echo test, a sign-off,
+// an advice — where [Mux.Request] would be wrong: the frame we are sending IS the
+// response, so there is nothing to wait for.
+//
+// Safe for concurrent use (the link serialises writes).
+func (m *Mux) Send(msg []byte) error {
+	select {
+	case <-m.done:
+		return m.closedErr()
+	default:
+	}
+	return m.link.Send(msg)
 }
 
 // stop closes the mux once, recording cause for Err. The first caller wins, so a
