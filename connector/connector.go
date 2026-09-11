@@ -55,8 +55,14 @@ type Config struct {
 	Network string
 	Addr    string
 	// Keyer correlates a response to its in-flight request (typically STAN +
-	// terminal, via mux.FieldKeyer).
+	// terminal, via mux.FieldKeyer). With ResponseKeyer unset it keys both
+	// directions; with it set, this keys OUTGOING requests only.
 	Keyer mux.Keyer
+	// ResponseKeyer keys INBOUND frames, when they must be keyed differently from
+	// outgoing ones — see [mux.WithResponseKeyer]. Set it (together with a Keyer that
+	// maps a request to the key of the response it expects) to stop a peer-originated
+	// request being mistaken for the answer to one of ours. Optional.
+	ResponseKeyer mux.Keyer
 	// LinkOptions configure the underlying link: framer (e.g. a Postilion 2-byte
 	// length prefix), TLS, MAC filters, TCP keep-alive.
 	LinkOptions []link.Option
@@ -68,15 +74,45 @@ type Config struct {
 	// the connector is marked up — the place for sign-on / session-key exchange. A
 	// non-nil error drops the link and triggers another reconnect. Optional.
 	OnConnect func(ctx context.Context, m *mux.Mux) error
+	// OnReady runs after the connector is marked UP, in its own goroutine, on each
+	// (re)connect. It is where a ceremony that must go through the connector's own
+	// request path belongs — a working-key exchange, a parameter download — because
+	// OnConnect runs BEFORE the mux is published and a [Connector.Request] from there
+	// fails ErrNotConnected. Its failure is the caller's to handle: unlike OnConnect,
+	// it cannot drop the link. Optional.
+	OnReady func(ctx context.Context, c *Connector)
 	// Keepalive runs on the live mux every KeepaliveInterval — typically an echo
 	// (0800) exchange. A non-nil error drops the link and forces a reconnect, so a
 	// dead-but-open peer is detected without waiting for a real request. Optional.
 	Keepalive         func(ctx context.Context, m *mux.Mux) error
 	KeepaliveInterval time.Duration
+	// KeepaliveTimeout bounds ONE keepalive, independently of Timeout. When it expires
+	// the link is dropped and reconnected.
+	//
+	// Without it a keepalive inherits the request Timeout, which is sized for a
+	// financial round-trip and is far too generous for an echo. That matters for the
+	// one failure mode a keepalive exists to catch: a HALF-OPEN peer — TCP still
+	// established, application silent, no FIN — where nothing ever closes the mux, so
+	// the echo simply waits. Until it gives up the connector goes on reporting
+	// Connected() and accepting requests onto a socket that will never answer, for
+	// KeepaliveInterval + Timeout. Bounding the echo to a few seconds is what shrinks
+	// that window; a peer that dies cleanly (EOF/RST) is noticed immediately either way,
+	// because the read loop fails the mux and unblocks the pending request.
+	//
+	// 0 falls back to Timeout (the previous behaviour).
+	KeepaliveTimeout time.Duration
 	// Unsolicited handles frames the peer sends that match no in-flight request —
 	// server-initiated advices, reversals, or sign-off. It runs on the read loop,
 	// so it must not block (hand off to a queue). Optional.
+	//
+	// Use OnUnsolicited instead when the frame must be ANSWERED.
 	Unsolicited func(frame []byte)
+	// OnUnsolicited is Unsolicited with the ability to reply over the same link, and
+	// takes precedence over it. A peer that echo-tests us (0800) and never receives an
+	// 0810 concludes the link is dead and closes it, which is indistinguishable from a
+	// flapping network; answering inline is a single write and is the intended use.
+	// Optional.
+	OnUnsolicited func(frame []byte, reply mux.Reply)
 	// Log receives lifecycle events (default slog.Default).
 	Log *slog.Logger
 }
@@ -157,6 +193,17 @@ func (c *Connector) Request(ctx context.Context, req []byte) ([]byte, error) {
 	return m.Request(ctx, req)
 }
 
+// Send writes req over the live connection WITHOUT waiting for a response — for
+// answering a peer-initiated frame, or pushing an advice the peer will not reply to.
+// It returns ErrNotConnected if the link is currently down.
+func (c *Connector) Send(req []byte) error {
+	m := c.mux.Load()
+	if m == nil {
+		return ErrNotConnected
+	}
+	return m.Send(req)
+}
+
 // Connected reports whether the link is currently up.
 func (c *Connector) Connected() bool { return c.mux.Load() != nil }
 
@@ -187,6 +234,12 @@ func (c *Connector) supervise(ctx context.Context) {
 		c.log.LogAttrs(ctx, slog.LevelInfo, "connector up",
 			slog.String("connector", c.cfg.Name), slog.String("addr", c.cfg.Addr))
 		up := time.Now()
+
+		// The link is published, so OnReady may use Request. Its own goroutine: it can
+		// take as long as its ceremony needs without stalling the keep-alive.
+		if c.cfg.OnReady != nil {
+			go c.cfg.OnReady(ctx, c)
+		}
 
 		c.serve(ctx, m) // blocks until the link dies or ctx is cancelled
 		cause := m.Err()
@@ -222,7 +275,13 @@ func (c *Connector) connect(ctx context.Context) (*mux.Mux, error) {
 	if c.cfg.Timeout > 0 {
 		opts = append(opts, mux.WithTimeout(c.cfg.Timeout))
 	}
-	if c.cfg.Unsolicited != nil {
+	if c.cfg.ResponseKeyer != nil {
+		opts = append(opts, mux.WithResponseKeyer(c.cfg.ResponseKeyer))
+	}
+	switch {
+	case c.cfg.OnUnsolicited != nil:
+		opts = append(opts, mux.WithUnsolicitedReplier(c.cfg.OnUnsolicited))
+	case c.cfg.Unsolicited != nil:
 		opts = append(opts, mux.WithUnsolicitedHandler(c.cfg.Unsolicited))
 	}
 	m := mux.New(l, c.cfg.Keyer, opts...)
@@ -237,6 +296,14 @@ func (c *Connector) connect(ctx context.Context) (*mux.Mux, error) {
 
 // serve runs the keepalive ticker (if any) and blocks until the link dies or ctx
 // is cancelled.
+//
+// The keepalive runs in its own goroutine, NOT inline. Run inline it owns the loop
+// for as long as the peer takes to answer, and during that time this select cannot
+// observe m.Done() — so a link that dies mid-keepalive goes unnoticed, while the
+// connector still reports Connected() and accepts requests onto the dead socket. A
+// dead-but-open peer (a NAT idle-out, a wedged host: TCP established, application
+// silent) therefore stayed "up" for a whole KeepaliveInterval + Timeout. Off the loop,
+// the link's death is seen the moment it happens whatever the keepalive is doing.
 func (c *Connector) serve(ctx context.Context, m *mux.Mux) {
 	var tick <-chan time.Time
 	if c.cfg.Keepalive != nil && c.cfg.KeepaliveInterval > 0 {
@@ -244,18 +311,42 @@ func (c *Connector) serve(ctx context.Context, m *mux.Mux) {
 		defer t.Stop()
 		tick = t.C
 	}
+	// Non-nil while a keepalive is outstanding, so at most one is ever in flight.
+	var inflight chan error
 	for {
 		select {
 		case <-ctx.Done():
 			return
 		case <-m.Done():
 			return
-		case <-tick:
-			if err := c.cfg.Keepalive(ctx, m); err != nil {
+		case err := <-inflight:
+			inflight = nil
+			if err != nil {
 				c.log.LogAttrs(ctx, slog.LevelWarn, "connector keepalive failed",
 					slog.String("connector", c.cfg.Name), slog.String("error", err.Error()))
 				return // force a reconnect
 			}
+		case <-tick:
+			if inflight != nil {
+				// The previous keepalive has not come back yet, so the peer is already
+				// late. Skip this tick rather than stacking a second one: the outstanding
+				// request carries its own deadline and will report the failure itself.
+				c.log.LogAttrs(ctx, slog.LevelDebug, "connector keepalive still outstanding, skipping tick",
+					slog.String("connector", c.cfg.Name))
+				continue
+			}
+			// Buffered, so the goroutine never blocks writing its result even if this
+			// loop has already returned and nothing is left to read it.
+			inflight = make(chan error, 1)
+			go func(done chan<- error) {
+				kctx := ctx
+				if c.cfg.KeepaliveTimeout > 0 {
+					var cancel context.CancelFunc
+					kctx, cancel = context.WithTimeout(ctx, c.cfg.KeepaliveTimeout)
+					defer cancel()
+				}
+				done <- c.cfg.Keepalive(kctx, m)
+			}(inflight)
 		}
 	}
 }
