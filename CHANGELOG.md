@@ -7,6 +7,54 @@ the [versioning policy](https://teqpace-services.github.io/isopace/versioning/).
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-09-11
+
+Network management for a persistent acquirer link. Four gaps found while tracing
+switch instability at a downstream acquirer, each of which forced a workaround that
+could not fully fix the problem from outside the library. Everything here is
+**additive** — an existing configuration behaves exactly as before — and confined to
+`mux` and `connector`, which v1.0.0 declares **experimental**.
+
+### Added
+
+- **Reply to an unsolicited frame.** `mux.Reply`, `mux.WithUnsolicitedReplier`,
+  `(*mux.Mux).Send`, `(*connector.Connector).Send`, and
+  `connector.Config.OnUnsolicited`. Previously `Unsolicited` handed over the frame and
+  nothing else, and nothing exposed a raw send, so a peer-initiated message could not be
+  answered at all — `Request` is the wrong tool, since the frame we would send *is* the
+  response and there is nothing to wait for. This matters on real links: Postilion-family
+  hosts do not only answer echo tests, they send them, and a host that echo-tests us and
+  never receives an 0810 concludes the link is dead and closes it.
+- **`mux.WithResponseKeyer` / `connector.Config.ResponseKeyer`** — a separate keyer for
+  INBOUND frames. With one keyer serving both directions no keyer can both match a
+  response to its request and separate a peer's request from our own; the two are
+  structurally identical. Network management correlates on the trace number alone (an
+  echo carries no terminal id), so a peer-originated 0800 on a colliding trace was
+  delivered as though it were the 0810 answer, and the real answer then arrived
+  unmatched. With both keyers the caller keys on message type as well as trace: the
+  request keyer maps an outgoing frame to the key of the response it *expects*, the
+  response keyer maps an inbound frame by its *own* MTI.
+- **`connector.Config.KeepaliveTimeout`** — bounds one keepalive independently of
+  `Timeout` (0 falls back to `Timeout`, the previous behaviour). Worth stating precisely,
+  because the obvious diagnosis is wrong: a peer that dies cleanly (EOF/RST) fails the
+  mux from the read loop, which unblocks the pending keepalive at once. The gap is the
+  **half-open** peer — TCP established, application silent, no FIN — where nothing closes
+  the mux and the echo waits out a timeout sized for a financial round-trip, while the
+  connector goes on reporting `Connected()` and accepting requests onto a socket that
+  will never answer.
+- **`connector.Config.OnReady`** — runs after the connector is marked up, in its own
+  goroutine, on each (re)connect. `OnConnect` runs *before* the mux is published, which
+  is right for sign-on but leaves nowhere for a ceremony that must go through the
+  connector's own request path (a working-key exchange, a parameter download): from
+  `OnConnect` it fails `ErrNotConnected`. Unlike `OnConnect` it cannot drop the link —
+  its failure is the caller's to handle.
+
+### Changed
+
+- `(*connector.Connector).serve` runs the keepalive off the supervise loop. This does
+  **not** shrink the half-open detection window (see `KeepaliveTimeout` above) but it
+  stops an outstanding keepalive from holding `Stop` hostage.
+
 ## [1.0.0] - 2026-06-17
 
 The first **stable** release. With the release-candidate soak complete, the
@@ -276,7 +324,8 @@ tested under `go test -race`.
   authenticates in constant time; expose it only behind appropriate network
   controls.
 
-[Unreleased]: https://github.com/teqpace-services/isopace/compare/v1.0.0...HEAD
+[Unreleased]: https://github.com/teqpace-services/isopace/compare/v1.1.0...HEAD
+[1.1.0]: https://github.com/teqpace-services/isopace/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/teqpace-services/isopace/compare/v1.0.0-rc.1...v1.0.0
 [1.0.0-rc.1]: https://github.com/teqpace-services/isopace/compare/v0.3.0...v1.0.0-rc.1
 [0.3.0]: https://github.com/teqpace-services/isopace/compare/v0.2.0...v0.3.0
